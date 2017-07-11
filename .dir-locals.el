@@ -1,0 +1,1 @@
+((nil . ((projectile-project-test-cmd . "(cd test; ./alltests.sh)"))))

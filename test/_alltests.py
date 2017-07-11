@@ -35,5 +35,8 @@ import unittest
 from warnings import simplefilter
 simplefilter('default')
 
+from seecr_test.functools.coretest import CoreTest
+
+
 if __name__ == '__main__':
     unittest.main()
