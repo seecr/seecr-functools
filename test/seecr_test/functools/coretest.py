@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from seecr.functools.core import first, second, identity, some_thread, fpartial, comp
+from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced
 
 
 class CoreTest(TestCase):
@@ -84,3 +84,76 @@ class CoreTest(TestCase):
         fn_pl1 = lambda x: x + 1
         fn_n = comp(fn_pl1, fn_pl1, fn_pl1, fn_pl1, fn_pl1)
         self.assertEquals(5, fn_n(0))
+
+    def test_reduced(self):
+        r = reduced("val")
+        self.assertEquals(reduced, type(r))
+        self.assertEquals("val", reduced(r).val.val) # DO NOT DO THIS!
+        self.assertEquals(True, is_reduced(r))
+        self.assertEquals("val", r.val)
+        self.assertEquals("val", unreduced(r))
+        self.assertEquals("val", unreduced(unreduced(r)))
+        self.assertEquals("val2", unreduced("val2"))
+        self.assertEquals(True, is_reduced(ensure_reduced(r)))
+        self.assertEquals("val", ensure_reduced(r).val)
+        self.assertEquals("val", unreduced(ensure_reduced(r)))
+        self.assertEquals("val", unreduced(ensure_reduced(ensure_reduced(r))))
+
+    def test_local_reduce_implementation_reduced(self):
+        def make_rf():
+            until = []
+            def add_3_things(acc, x):
+                acc = acc + x
+                until.append(True)
+                if len(until) == 3:
+                    return ensure_reduced(acc)
+                return acc
+            return add_3_things
+
+        x = reduce(make_rf(), 0, [1, 2, 3, 4, 5, 6, 7, 8, 9])
+        self.assertEquals(6, x)
+        self.assertFalse(is_reduced(x))
+
+    def test_local_reduce_implementation_arity2_emptyColl(self):
+        def f():
+            return 'x'
+        self.assertEquals('x', reduce(f, []))
+
+    def test_local_reduce_implementation_arity2_coll_1_item(self):
+        def f():
+            raise Hell
+        self.assertEquals(1, reduce(f, [1]))
+
+    def test_local_reduce_implementation_arity2_coll_2_item(self):
+        def f(acc, e):
+            return acc + e
+        self.assertEquals(3, reduce(f, [1, 2]))
+
+    def test_local_reduce_implementation_arity2_coll_n_item(self):
+        def f(acc, e):
+            return acc + e
+        self.assertEquals(10, reduce(f, [1, 2, 3, 4]))
+
+    def test_local_reduce_implementation_arity3_emptyColl(self):
+        def f(acc, e):
+            raise Hell
+        self.assertEquals('x', reduce(f, 'x', []))
+
+    def test_local_reduce_implementation_arity3_coll_1_item(self):
+        def f(acc, e):
+            return acc + e
+        self.assertEquals(3, reduce(f, 1, [2]))
+
+    def test_local_reduce_implementation_arity3_coll_2_item(self):
+        def f(acc, e):
+            return acc + e
+        self.assertEquals(6, reduce(f, 1, [2, 3]))
+
+    def test_local_reduce_implementation_arity3_coll_n_item(self):
+        def f(acc, e):
+            return acc + e
+        self.assertEquals(15, reduce(f, 1, [2, 3, 4, 5]))
+
+    def test_local_reduce_bad_arity(self):
+        self.assertRaises(TypeError, lambda: reduce(lambda:None)) # Too few
+        self.assertRaises(TypeError, lambda: reduce(lambda:None, 1, [2], 'drie')) # Too many
