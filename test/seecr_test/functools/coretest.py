@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced
+from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take
 
 
 class CoreTest(TestCase):
@@ -29,15 +29,32 @@ class CoreTest(TestCase):
         self.assertEquals(2, second([1, 2, 3]))
 
     def testSome_thread(self):
-        def make_none(x):
-            return None
-        def add_five(x):
-            return x+5
-        def add_three(x):
-            return x+3
+        def input_is(f, expected_val):
+            def _input_is(v):
+                self.assertEquals(expected_val, v)
+                return f(v)
+            return _input_is
 
-        self.assertEqual(13, some_thread(5, add_five, add_three))
-        self.assertEqual(None, some_thread(5, add_three, make_none, add_five))
+        def raiser(v):
+            raise RuntimeError('should not happen!')
+
+        self.assertEquals(None, some_thread(None))
+        self.assertEquals('x', some_thread('x'))
+        self.assertEquals(None, some_thread(None, raiser))
+        self.assertRaises(RuntimeError, lambda: some_thread('x', raiser))
+        self.assertEquals(42, some_thread('x', input_is(lambda x: 42, 'x')))
+        self.assertEquals(42, some_thread('x',
+                                          input_is(lambda x: 'y', 'x'),
+                                          input_is(lambda x: 42, 'y')))
+        self.assertEquals(None, some_thread('x',
+                                          input_is(lambda x: None, 'x'),
+                                          raiser))
+
+        # Example usage:
+        self.assertEqual(None, some_thread(5,
+                                           lambda x: x + 3,
+                                           lambda x: None, # Some either-a-number-or-None fn
+                                           lambda x: x + 5))
 
     def testFpartial(self):
         f = lambda *a, **kw: (a, kw)
@@ -157,3 +174,140 @@ class CoreTest(TestCase):
     def test_local_reduce_bad_arity(self):
         self.assertRaises(TypeError, lambda: reduce(lambda:None)) # Too few
         self.assertRaises(TypeError, lambda: reduce(lambda:None, 1, [2], 'drie')) # Too many
+
+    def test_completing(self):
+        def rf1(acc=None, e=None):
+            if acc == e == None:
+                return 0       # Some empty-coll stuffs
+
+            assert acc and e    # either 2-arity or 0-arity, never 1-arity-called
+            return acc + e      # Some reducing functionality
+
+        def rf2(acc=None, e=None):
+            if acc == e == None:
+                return 'hi!'
+
+            assert acc and e
+            return 'there'
+
+        c_f1 = completing(rf1)
+        c_f2 = completing(rf2)
+
+        # 0-arity (calls original-fn)
+        self.assertEquals(0, c_f1())
+        self.assertEquals('hi!', c_f2())
+
+        # 1-arity (default impl -> identity)
+        self.assertEquals(42, c_f1(42))
+        self.assertEquals('whatever', c_f1('whatever'))
+        d = {'no': 'matter', 'what': 'in-is-out'}
+        self.assertTrue(d is c_f2(d))
+
+        # 2-arity (calls original-fn)
+        self.assertEquals(44, c_f1(42, 2))
+        self.assertEquals('there', c_f2('in', 'put'))
+
+        # 1-arity (given cf-fn)
+        cf_1 = lambda x: [x, 'cf']
+        cf_2 = lambda x: list(x)
+        c_f1_cf1 = completing(rf1, cf_1)
+        c_f2_cf2 = completing(rf2, cf_2)
+        self.assertEquals([42, 'cf'], c_f1_cf1(42))
+        self.assertEquals(['in', 'put'], c_f2_cf2(('in', 'put')))
+
+        # Bad arity
+        self.assertRaises(TypeError, lambda: completing(rf1)(1, 2, 3))
+
+    def test_transduce(self):
+        def rf1(acc=None, e=None):
+            if acc == e == None:
+                return []
+
+            assert (acc is not None) and (e is not None)
+            acc.append(e + 10)       # Assuming acc is a list.
+            return acc
+
+        # With identity i.s.o. a (composed) transducer(s) - works just like reduce, except for the 1-arity call to `f'.
+        self.assertEquals(10, transduce(identity, completing(lambda acc, e: acc + e), 1, [2, 3, 4]))
+        self.assertEquals([11, 12, 13, 14], transduce(identity, completing(rf1), [1, 2, 3, 4]))
+
+        # With one transducer
+        def _a(acc, e):
+            acc.append(e)
+            return acc
+        self.assertEquals([1, 2], transduce(take(2), completing(_a), [], [1, 2, 3, 4, 5]))
+
+        # With more transducers (composed)
+        self.fail('todo')
+
+    def test_take(self):
+        l = list
+
+        # 2-arity
+        self.assertEquals([], l(take(15, [])))
+        self.assertEquals([], l(take(0, [1, 2])))
+        self.assertEquals([], l(take(-12, [1, 2]))) # Ridiculous, but fine.
+        self.assertEquals([1, 2], l(take(15, [1, 2])))
+        self.assertEquals([1, 2], l(take(3, [1, 2])))
+        self.assertEquals([1, 2, 3], l(take(3, [1, 2, 3])))
+        self.assertEquals([1, 2, 3], l(take(3, [1, 2, 3, 4])))
+        self.assertEquals([1, 2, 3], l(take(3, [1, 2, 3, 4, 5])))
+
+        # 1-arity (transducer)
+        _log = []
+        def log():
+            _l = _log[:]
+            del _log[:]
+            return _l
+
+        def next_xf(*a):
+            assert 0 <= len(a) <= 2
+            _log.append(a)
+            if len(a) == 0:
+                return []
+            elif len(a) == 1:
+                return first(a)
+            elif len(a) == 2:
+                result_copy = first(a)[:]
+                result_copy.append(second(a))
+                return result_copy
+
+
+        # Without 0-arity call (this is *normal*)!
+        xf_prestart = take(2)
+        xf = xf_prestart(next_xf)
+
+        r = xf([], 1)
+        self.assertEquals([([], 1)], log())
+        self.assertEquals([1], r)
+        r = xf([1], 2)
+        self.assertEquals([([1], 2)], log())
+        self.assertTrue(is_reduced(r))
+        self.assertEquals([1, 2], unreduced(r))
+        r = xf(unreduced(r))
+        self.assertEquals([([1, 2],)], log())
+        self.assertEquals([1, 2], r)
+
+        # With 0-arity call (this is *abnormal*)!
+        xf_prestart = take(2)
+        xf = xf_prestart(next_xf)
+
+        r = xf()
+        self.assertEquals([()], log())
+        self.assertEquals([], r)
+        r = xf(r, 1)
+        self.assertEquals([([], 1)], log())
+        self.assertEquals([1], r)
+        r = xf([1], 2)
+        self.assertEquals([([1], 2)], log())
+        self.assertTrue(is_reduced(r))
+        self.assertEquals([1, 2], unreduced(r))
+        r = xf(unreduced(r))
+        self.assertEquals([([1, 2],)], log())
+        self.assertEquals([1, 2], r)
+
+        # Using transduce
+        def _a(acc, e):
+            acc.append(e)
+            return acc
+        self.assertEquals([1, 2], transduce(take(2), completing(_a), [], [1, 2, 3, 4, 5]))

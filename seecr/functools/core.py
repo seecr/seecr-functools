@@ -17,8 +17,11 @@ def unreduced(x):
 
 _not_found = type('NOT_FOUND', (object,), {})()
 
-def reduce(*args):
+def reduce(*a):
     """
+    reduce(f, coll)
+    reduce(f, val, coll)
+
     For loop impl of reduce in Python that honors sentinal wrapper Reduced and
     uses it to signal early termination.
 
@@ -31,12 +34,9 @@ def reduce(*args):
     result of applying f to val and the first item in coll, then
     applying f to that result and the 2nd item, etc. If coll contains no
     items, returns val and f is not called.
-
-    reduce(f, coll)
-    reduce(f, val, coll)
     """
-    if len(args) == 2:
-        f, coll = args[0], iter(args[1])
+    if len(a) == 2:
+        f, coll = a[0], iter(a[1])
         _1, _2 = next(coll, _not_found), next(coll, _not_found)
         if _1 is _not_found:
             return f()
@@ -44,19 +44,17 @@ def reduce(*args):
             return _1
 
         accum_value = f(_1, _2)
-    elif len(args) == 3:
-        f, val, coll = args
+    elif len(a) == 3:
+        f, val, coll = a
         accum_value = val
     else:
-        raise TypeError("reduce takes either 2 or 3 arguments ({} given)".format(len(args)))
+        raise TypeError("reduce takes either 2 or 3 arguments ({} given)".format(len(a)))
 
     for x in coll:
         accum_value = f(accum_value, x)
         if is_reduced(accum_value):
             return accum_value.val
     return accum_value
-
-##
 
 def first(iterable):
     if iterable:
@@ -69,11 +67,16 @@ def second(iterable):
             if i == 1:
                 return v
 
+# TODO: nth, before, after, assoc / assoc_in, get / get_in
+
 def identity(x):
     return x
 
 def some_thread(x, *fns):
-    ""
+    """
+    When x is not None, calls the first fn with it,
+    and when that result is not None, calls the next with the result, etc.
+    """
     if not fns:
         return x
 
@@ -92,6 +95,48 @@ def fpartial(f, *a, **kw):       # similar to: https://github.com/clojurewerkz/s
         return f(arg, *a, **kw)
     return _wrap
 
+def take(*a):
+    """
+    take(n)
+    take(n, coll)
+
+    Returns an iterable of the first n items in coll, or all items if
+    there are fewer than n.  Returns a stateful transducer when
+    no collection is provided.
+    """
+    if len(a) == 1:
+        n, = a
+        def _take_transducer(rf):
+            _nv = [n]
+            def _take_xf(*a):
+                if len(a) == 0:
+                    return rf()
+                elif len(a) == 1:
+                    result, = a
+                    return rf(result)
+                elif len(a) == 2:
+                    result, input_ = a
+                    _n = _nv[0]
+                    _nv[0] = _nn = _n - 1
+                    result = rf(result, input_) if _n > 0 else result
+                    if _nn > 0:
+                        return result
+                    else:
+                        return ensure_reduced(result)
+            return _take_xf
+        return _take_transducer
+    elif len(a) == 2:
+        n, coll = a
+        def _take():
+            _iter = iter(coll)
+            if n < 1:
+                return
+            for _ in xrange(n):
+                yield next(_iter)
+        return _take()
+    else:
+    	raise TypeError("take takes either 1 or 2 arguments ({} given)".format(len(a)))
+
 def comp(*fns):
     """
     Takes a set of functions and returns a fn that is the composition of those fns.  The returned fn takes a variable number of args, applies the rightmost of fns to the args, the next fn (right-to-left) to the result, etc.
@@ -109,11 +154,31 @@ def comp(*fns):
     else:   # 3..n args
         return reduce(comp, fns) # more than 1 item, so always starts with comp(1st, 2nd)-call
 
-
-
-
-def transduce(*args):
+def completing(f, cf=identity):
     """
+    Takes a reducing function f of 2 args and returns a fn suitable for
+    transduce by adding an arity-1 signature that calls cf (default -
+    identity) on the result argument.
+    """
+    def _completing(*a):
+        if len(a) == 0:
+            return f()
+        elif len(a) == 1:
+            x, = a
+            return cf(x)
+        elif len(a) == 2:
+            x, y = a
+            return f(x, y)
+        else:
+            raise TypeError("_completing takes either 0, 1 or 2 arguments ({} given)".format(len(a)))
+
+    return _completing
+
+def transduce(*a):
+    """
+    transduce(xform, f, coll)
+    transduce(xform, f, init, coll)
+
     reduce with a transformation of f (xf). If init is not
     supplied, (f) will be called to produce it. f should be a reducing
     step function that accepts both 1 and 2 arguments, if it accepts
@@ -122,28 +187,15 @@ def transduce(*args):
     then applying xf to that result and the 2nd item, etc. If coll
     contains no items, returns init and f is not called. Note that
     certain transforms may inject or skip items.
-
-    xform = comp of fns
-    f = f(1, 2) or f(1)
-    init = inital value (optional)
-    coll = iterable data (string not advised)
     """
-
-    xform = f = coll = init = None
-    if len(args) == 3:
-        xform, f, coll = args
+    if len(a) == 3:
+        xform, f, coll = a
         return transduce(xform, f, f(), coll)
+    elif len(a) == 4:
+        xform, f, init, coll = a
+    else:
+        raise TypeError("transduce takes either 3 or 4 arguments ({} given)".format(len(a)))
 
-    elif len(args) == 4:
-        xform, f, init, coll = args
-        f = xform(f)
-
-     # (let [f (xform f)
-     #       ret (if (instance? clojure.lang.IReduceInit coll)
-     #             (.reduce ^clojure.lang.IReduceInit coll f init)
-     #             (clojure.core.protocols/coll-reduce coll f init))]
-     #   (f ret))))
-
-def _transduce(xform, f, coll, init=None):
-    if init:
-        pass
+    _f = xform(f)
+    ret = reduce(_f, init, coll)
+    return _f(ret)
