@@ -36,7 +36,8 @@ def reduce(*a):
     items, returns val and f is not called.
     """
     if len(a) == 2:
-        f, coll = a[0], iter(a[1])
+        f, coll = a[0], iter(a[1])  # Only keep a reference to the iterator, so
+        del a                       # processed items can be GC'ed iff relevant.
         _1, _2 = next(coll, _not_found), next(coll, _not_found)
         if _1 is _not_found:
             return f()
@@ -45,10 +46,12 @@ def reduce(*a):
 
         accum_value = f(_1, _2)
     elif len(a) == 3:
-        f, val, coll = a
+        f, val, coll = a[0], a[1], iter(a[2])  # Only keep a reference to the iterator, so
+        del a                                  # processed items can be GC'ed iff relevant.
         accum_value = val
     else:
         raise TypeError("reduce takes either 2 or 3 arguments ({} given)".format(len(a)))
+
 
     for x in coll:
         accum_value = f(accum_value, x)
@@ -63,9 +66,9 @@ def first(iterable):
 
 def second(iterable):
     if iterable:
-        for i, v in enumerate(iterable):
-            if i == 1:
-                return v
+        iterable = iter(iterable)
+        next(iterable, None)
+        return next(iterable, None)
 
 # TODO: nth, before, after, assoc / assoc_in, get / get_in
 
@@ -106,9 +109,10 @@ def take(*a):
     """
     if len(a) == 1:
         n, = a
-        def _take_transducer(rf):
+        del a
+        def _take_xf(rf):
             _nv = [n]
-            def _take_xf(*a):
+            def _take_step(*a):
                 if len(a) == 0:
                     return rf()
                 elif len(a) == 1:
@@ -123,16 +127,16 @@ def take(*a):
                         return result
                     else:
                         return ensure_reduced(result)
-            return _take_xf
-        return _take_transducer
+            return _take_step
+        return _take_xf
     elif len(a) == 2:
-        n, coll = a
+        n, coll = a[0], iter(a[1])
+        del a
         def _take():
-            _iter = iter(coll)
             if n < 1:
                 return
             for _ in xrange(n):
-                yield next(_iter)
+                yield next(coll)
         return _take()
     else:
     	raise TypeError("take takes either 1 or 2 arguments ({} given)".format(len(a)))
@@ -190,9 +194,13 @@ def transduce(*a):
     """
     if len(a) == 3:
         xform, f, coll = a
+        coll = iter(coll)
+        del a
         return transduce(xform, f, f(), coll)
     elif len(a) == 4:
         xform, f, init, coll = a
+        coll = iter(coll)
+        del a
     else:
         raise TypeError("transduce takes either 3 or 4 arguments ({} given)".format(len(a)))
 

@@ -36,6 +36,7 @@ from warnings import simplefilter
 simplefilter('default')
 
 from seecr_test.functools.coretest import CoreTest
+from seecr_test.functools.stringtest import StringTest
 
 
 if __name__ == '__main__':
