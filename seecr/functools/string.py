@@ -1,4 +1,4 @@
-from .core import reduce, preserving_reduced
+from .core import reduce
 
 def strip(s, chars=None):
     """
