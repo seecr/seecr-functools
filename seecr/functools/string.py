@@ -1,3 +1,6 @@
+from .core import reduce, preserving_reduced
+
+
 def strip(s, chrs=None):
     return s.strip() if chrs is None else s.strip(chrs)
 
@@ -11,7 +14,20 @@ def strip(*a):
     If s is given, operate on that string, otherwise returns a transducer.
     """
     if len(a) == 1:
-        pass
+        chars, = a
+        def _strip_xf(rf):
+            def _strip_step(*a):
+                if len(a) == 0:
+                    return rf()
+                elif len(a) == 1:
+                    result, = a
+                    return rf(result)
+                elif len(a) == 2:
+                    result, input_ = a
+                    # TODO: HIER VERDER!!
+                    # return reduce(rrf, result, input_.strip(sep, maxstrip))
+            return _strip_step
+        return _strip_xf
     elif len(a) == 2:
         chars, s = a
         return s.strip(chars)
@@ -44,7 +60,21 @@ def split(*a):
     If s is given, operate on that string, otherwise returns a transducer.
     """
     if len(a) == 1:
-        pass
+        opts, = a
+        sep, maxsplit = _split_opts(opts)
+        def _split_xf(rf):
+            rrf = preserving_reduced(rf)
+            def _split_step(*a):
+                if len(a) == 0:
+                    return rf()
+                elif len(a) == 1:
+                    result, = a
+                    return rf(result)
+                elif len(a) == 2:
+                    result, input_ = a
+                    return reduce(rrf, result, input_.split(sep, maxsplit))
+            return _split_step
+        return _split_xf
     elif len(a) == 2:
         opts, s = a
         sep, maxsplit = _split_opts(opts)

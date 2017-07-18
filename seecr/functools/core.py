@@ -15,6 +15,12 @@ def ensure_reduced(x):
 def unreduced(x):
     return x.val if is_reduced(x) else x
 
+def preserving_reduced(rf):     # FIXME: Test Me!
+    def _preserving_reduced(acc, i):
+        ret = rf(acc, i)
+        return reduced(ret) if is_reduced(ret) else ret # Purposefully double-wrap a value in reduced.
+    return _preserving_reduced
+
 _not_found = type('NOT_FOUND', (object,), {})()
 
 def reduce(*a):
