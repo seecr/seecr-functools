@@ -21,6 +21,25 @@ def preserving_reduced(rf):     # FIXME: Test Me!
         return reduced(ret) if is_reduced(ret) else ret # Purposefully double-wrap a value in reduced.
     return _preserving_reduced
 
+
+def cat(rf):
+    """
+    A transducer which concatenates the contents of each input, which must be a collection, into the reduction.
+    """
+    rrf = preserving_reduced(rf)
+    def _cat_step(*a):
+        if len(a) == 0:
+            return rf()
+        elif len(a) == 1:
+            result, = a
+            return rf(result)
+        elif len(a) == 2:
+            result, input_ = a
+            return reduce(rrf, result, input_)
+        else:
+            raise TypeError("_cat_step takes either 0, 1 or 2 arguments ({} given)".format(len(a)))
+    return _cat_step
+
 _not_found = type('NOT_FOUND', (object,), {})()
 
 def reduce(*a):
@@ -64,6 +83,34 @@ def reduce(*a):
         if is_reduced(accum_value):
             return accum_value.val
     return accum_value
+
+def map(f):
+    """
+    FIXME: Only tranducer-arity implemented!
+
+    Returns a lazy sequence consisting of the result of applying f to
+    the set of first items of each coll, followed by applying f to the
+    set of second items in each coll, until any one of the colls is
+    exhausted.  Any remaining items in other colls are ignored. Function
+    f should accept number-of-colls arguments. Returns a transducer when
+    no collection is provided.
+    """
+    def _map_xf(rf):
+        def _map_step(*a):
+            if len(a) == 0:
+                return rf()
+            elif len(a) == 1:
+                result, = a
+                return rf(result)
+            elif len(a) == 2:
+                result, input_ = a
+                return rf(result, f(input_))
+            else:               # > 2 - not a transducer-arity, so needs a wrapper to transform (result, input) to (result, input_1, ..., input_n).
+                result, inputs = a[0], a[1:]
+                return rf(result, f(*inputs))
+        return _map_step
+    return _map_xf
+
 
 def first(iterable):
     if iterable:

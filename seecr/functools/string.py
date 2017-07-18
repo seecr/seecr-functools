@@ -1,48 +1,14 @@
 from .core import reduce, preserving_reduced
 
-
-def strip(s, chrs=None):
-    return s.strip() if chrs is None else s.strip(chrs)
-
-def strip(*a):
+def strip(s, chars=None):
     """
-    strip(chars)
-    strip(chars, s)
-
     Return a string with leading and trailing characters removed. If chars is None, whitespace characters are removed. If given chars must be a string; the characters in the string will be stripped from the both ends of the string.
-
-    If s is given, operate on that string, otherwise returns a transducer.
     """
-    if len(a) == 1:
-        chars, = a
-        def _strip_xf(rf):
-            def _strip_step(*a):
-                if len(a) == 0:
-                    return rf()
-                elif len(a) == 1:
-                    result, = a
-                    return rf(result)
-                elif len(a) == 2:
-                    result, input_ = a
-                    # TODO: HIER VERDER!!
-                    # return reduce(rrf, result, input_.strip(sep, maxstrip))
-            return _strip_step
-        return _strip_xf
-    elif len(a) == 2:
-        chars, s = a
-        return s.strip(chars)
-    else:
-    	raise TypeError("strip takes either 1 or 2 arguments ({} given)".format(len(a)))
+    return s.strip(chars)
 
-def _split_opts(opts):
-    return opts['sep'], opts.get('maxsplit', -1)
-
-def split(*a):
+def split(s, sep, maxsplit=-1):
     """
-    split(opts)
-    split(opts, s)
-
-    Return an iterable of the words of the string s, opts is a dict:
+    Return an iterable of the words of the string s:
      - sep:
        Specifies a string to be used as the word separator (required);
 
@@ -59,26 +25,7 @@ def split(*a):
 
     If s is given, operate on that string, otherwise returns a transducer.
     """
-    if len(a) == 1:
-        opts, = a
-        sep, maxsplit = _split_opts(opts)
-        def _split_xf(rf):
-            rrf = preserving_reduced(rf)
-            def _split_step(*a):
-                if len(a) == 0:
-                    return rf()
-                elif len(a) == 1:
-                    result, = a
-                    return rf(result)
-                elif len(a) == 2:
-                    result, input_ = a
-                    return reduce(rrf, result, input_.split(sep, maxsplit))
-            return _split_step
-        return _split_xf
-    elif len(a) == 2:
-        opts, s = a
-        sep, maxsplit = _split_opts(opts)
+    if sep is None:
+        raise ValueError('separator must not be None')
 
-        return s.split(sep, maxsplit)
-    else:
-    	raise TypeError("split takes either 1 or 2 arguments ({} given)".format(len(a)))
+    return s.split(sep, maxsplit)

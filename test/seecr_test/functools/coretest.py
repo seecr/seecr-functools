@@ -1,7 +1,7 @@
 from unittest import TestCase
 
-from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take
-
+from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map
+from seecr.functools.string import strip, split
 
 class CoreTest(TestCase):
     def testIdentity(self):
@@ -238,7 +238,121 @@ class CoreTest(TestCase):
         self.assertEquals([1, 2], transduce(take(2), completing(_a), [], [1, 2, 3, 4, 5]))
 
         # With more transducers (composed)
-        self.fail('todo')
+        self.assertEquals([11, 11, 12, 12, 13, 13], transduce(
+            comp(
+                take(3),
+                map(lambda x: x + 10),
+                map(lambda x: '\t\n\r{}-{}   '.format(x, x)),
+                map(lambda x: split(x, '-')),
+                cat,
+                map(lambda x: int(strip(x))),
+            ),
+            completing(_a), [], [1, 2, 3, 4, 5]))
+
+    def test_map(self):
+        # 0-arity
+        called = []
+        self.assertEquals('x', map(lambda: Hell)(lambda: called.append(True) or 'x')())
+        self.assertEquals([True], called)
+
+        # 1-arity
+        called = []
+        self.assertEquals('x', map(lambda: Hell)(lambda r: called.append(r) or 'x')('res'))
+        self.assertEquals(['res'], called)
+
+        # 2-arity
+        called = []
+        self.assertEquals('res', map(lambda x: x + 1)(lambda r, i: called.append((r, i)) or 'res')('in', 1))
+        self.assertEquals([('in', 2)], called)
+
+        # 3+-arity
+        called = []
+        self.assertEquals('res', map(lambda x, y, z: x + y + z)(lambda r, i: called.append((r, i)) or 'res')('in', 1, 2, 3))
+        self.assertEquals([('in', 6)], called)
+
+        # with transduce
+        self.assertEquals(27, transduce(map(lambda x: x + 10), completing(lambda acc, e: acc + e), 0, [5, 2]))
+
+    def test_cat(self):
+        _log = []
+        def test_f(retval):
+            def f(*a):
+                _log.append(a)
+                return retval
+            return f
+
+        def log():
+            _l = _log[:]
+            del _log[:]
+            return _l
+
+        # 0-arity
+        f = test_f('whatever')
+        self.assertEquals('whatever', cat(f)())
+        self.assertEquals([()], log())
+
+        # 1-arity
+        f = test_f('whatever-done')
+        self.assertEquals('whatever-done', cat(f)('whatever-in'))
+        self.assertEquals([('whatever-in',)], log())
+
+        # 2-arity - nested empty (result-in == result=out, rf not called)
+        f = test_f('whatever')
+        self.assertEquals('whatever-in', cat(f)('whatever-in', []))
+        self.assertEquals([], log())
+
+        # 2-arity - nested 1
+        f = test_f('whatever')
+        self.assertEquals('whatever', cat(f)('whatever-in', [1]))
+        self.assertEquals([('whatever-in', 1)], log())
+
+        # 2-arity - nested n
+        f = test_f('whatever')
+        self.assertEquals('whatever', cat(f)('whatever-in', [1, 2, 3, 4]))
+        self.assertEquals([
+            ('whatever-in', 1),
+            ('whatever', 2),    # 2-n acc is result of the prev. call
+            ('whatever', 3),
+            ('whatever', 4),
+        ], log())
+
+        # 2-arity - nested has reduced value - 1
+        def test_f_2(n):
+            def f(acc, e):
+                _log.append((acc, e))
+                r = '{}-{}'.format(acc, e)
+                if e == n:
+                    return reduced('{}-done'.format(r))
+                return r
+            return f
+
+        f = test_f_2(1)
+        r = cat(f)('whatever-in', [1, 2, 3, 4])
+        self.assertTrue(is_reduced(r))
+        self.assertEquals('whatever-in-1-done', r.val)
+        self.assertEquals([
+            ('whatever-in', 1),
+        ], log())
+
+        # 2-arity - nested has reduced value - n
+        f = test_f_2(3)
+        r = cat(f)('whatever-in', [1, 2, 3, 4])
+        self.assertTrue(is_reduced(r))
+        self.assertEquals('whatever-in-1-2-3-done', r.val)
+        self.assertEquals([
+            ('whatever-in', 1),
+            ('whatever-in-1', 2),
+            ('whatever-in-1-2', 3),
+        ], log())
+
+        # bad arity
+        self.assertRaises(TypeError, lambda: cat(None, None, None))
+
+        # with transduce
+        def _a(acc, e):
+            acc.append(e)
+            return acc
+        self.assertEquals([1, 2, 3, 4, 5, 6], transduce(cat, completing(_a), [], [[1, 2], [3, 4, 5], [], [6]]))
 
     def test_take(self):
         l = list
