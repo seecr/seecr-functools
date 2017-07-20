@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map
+from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run
 from seecr.functools.string import strip, split
 
 class CoreTest(TestCase):
@@ -174,6 +174,16 @@ class CoreTest(TestCase):
     def test_local_reduce_bad_arity(self):
         self.assertRaises(TypeError, lambda: reduce(lambda:None)) # Too few
         self.assertRaises(TypeError, lambda: reduce(lambda:None, 1, [2], 'drie')) # Too many
+
+    def testRun(self):
+        log = []
+        f = lambda i: log.append(i)
+
+        self.assertEquals(None, run(f, []))
+        self.assertEquals([], log)
+
+        self.assertEquals(None, run(f, [1, 2, 3]))
+        self.assertEquals([1, 2, 3], log)
 
     def test_completing(self):
         def rf1(acc=None, e=None):

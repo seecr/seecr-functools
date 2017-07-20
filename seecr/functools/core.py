@@ -128,6 +128,10 @@ def second(iterable):
 def identity(x):
     return x
 
+def run(proc, coll):
+    "Runs the supplied procedure, for purposes of side effects, on successive items in coll. Returns None."
+    reduce(lambda acc, e: proc(e), None, coll)
+
 def some_thread(x, *fns):
     """
     When x is not None, calls the first fn with it,
