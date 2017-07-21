@@ -86,7 +86,7 @@ def reduce(*a):
 
 def map(f):
     """
-    FIXME: Only tranducer-arity implemented!
+    FIXME: Only transducer-arity implemented!
 
     Returns a lazy sequence consisting of the result of applying f to
     the set of first items of each coll, followed by applying f to the
@@ -111,6 +111,40 @@ def map(f):
         return _map_step
     return _map_xf
 
+def filter(pred):
+    """
+    FIXME: Only transducer-arity implemented!
+
+    Returns a lazy sequence of the items in coll for which
+    (pred item) returns true. pred must be free of side-effects.
+    Returns a transducer when no collection is provided.
+    """
+    def _filter_xf(rf):
+        def _filter_step(*a):
+            if len(a) == 0:
+                return rf()
+            elif len(a) == 1:
+                result, = a
+                return rf(result)
+            elif len(a) == 2:
+                result, input_ = a
+                if pred(input_):
+                    return rf(result, input_)
+                return result
+            else:
+                raise TypeError("filter takes either 0, 1 or 2 arguments ({} given)".format(len(a)))
+        return _filter_step
+    return _filter_xf
+
+def remove(pred):
+    """
+    FIXME: Only transducer-arity implemented!
+
+    Returns a lazy sequence of the items in coll for which
+    (pred item) returns false. pred must be free of side-effects.
+    Returns a transducer when no collection is provided.
+    """
+    return filter(complement(pred))
 
 def first(iterable):
     if iterable:
@@ -127,6 +161,15 @@ def second(iterable):
 
 def identity(x):
     return x
+
+def complement(f):
+    """
+    Takes a fn f and returns a fn that takes the same arguments as f,
+    has the same effects, if any, and returns the opposite truth value.
+    """
+    def _complement(*a, **kw):
+        return not f(*a, **kw)
+    return _complement
 
 def run(proc, coll):
     "Runs the supplied procedure, for purposes of side effects, on successive items in coll. Returns None."

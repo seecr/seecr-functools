@@ -1,6 +1,8 @@
 from unittest import TestCase
 
-from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run
+from copy import deepcopy, copy
+
+from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove
 from seecr.functools.string import strip, split
 
 class CoreTest(TestCase):
@@ -283,6 +285,71 @@ class CoreTest(TestCase):
         # with transduce
         self.assertEquals(27, transduce(map(lambda x: x + 10), completing(lambda acc, e: acc + e), 0, [5, 2]))
 
+    def test_filter(self):
+        assert_tx_default_0_1_arities(filter(raiser))
+        assert_tx_default_bad_arity(filter(raiser))
+
+        # 2-arity - not-filtered
+        called = []
+        self.assertEquals('res', filter(lambda x: x == 1)(lambda r, i: called.append((r, i)) or 'res')('in', 1))
+        self.assertEquals([('in', 1)], called)
+
+        # 2-arity - filtered
+        called = []
+        self.assertEquals('in', filter(lambda x: x != 1)(lambda r, i: called.append((r, i)) or 'res')('in', 1))
+        self.assertEquals([], called)
+
+        # with transduce
+        self.assertEquals(4, transduce(filter(lambda x: (x % 2) == 1), completing(lambda acc, e: acc + e), 0, [1, 2, 3, 4]))
+
+    def test_remove(self):
+        assert_tx_default_0_1_arities(remove(raiser))
+        assert_tx_default_bad_arity(remove(raiser))
+
+        # 2-arity - not-removed
+        called = []
+        self.assertEquals('res', remove(lambda x: x != 1)(lambda r, i: called.append((r, i)) or 'res')('in', 1))
+        self.assertEquals([('in', 1)], called)
+
+        # 2-arity - removed
+        called = []
+        self.assertEquals('in', remove(lambda x: x == 1)(lambda r, i: called.append((r, i)) or 'res')('in', 1))
+        self.assertEquals([], called)
+
+        # with transduce
+        self.assertEquals(4, transduce(remove(lambda x: (x % 2) == 0), completing(lambda acc, e: acc + e), 0, [1, 2, 3, 4]))
+
+    def test_complement(self):
+        called = []
+        def f_0_true():
+            called.append(('f_0_true',))
+            return 42
+        def f_0_false():
+            called.append(('f_0_false',))
+            return False
+        def f_1_true(a):
+            called.append(('f_1_true', a))
+            return 'true'
+        def f_n_false(a, b, c, k='v1', k2='v2'):
+            called.append(('f_n_false', a, b, c, k, k2))
+            return ''
+
+        def t(f, *a, **kw):
+            ret = complement(f)(*a, **kw)
+            _called = called[:]
+            self.assertEquals(1, len(_called))
+            del called[:]
+            return (ret, _called[0])
+
+        self.assertRaises(TypeError, lambda: t(f_0_true, 'too-many-args'))
+        self.assertRaises(TypeError, lambda: t(f_0_true, kw='too-many-kwargs'))
+        self.assertRaises(TypeError, lambda: t(f_1_true))
+
+        self.assertEquals((False, ('f_0_true',)), t(f_0_true))
+        self.assertEquals((True, ('f_0_false',)), t(f_0_false))
+        self.assertEquals((False, ('f_1_true', 'x')), t(f_1_true, 'x'))
+        self.assertEquals((True, ('f_n_false', 1, 'B', object, 'v1', 'K2')), t(f_n_false, 1, 'B', object, k2='K2'))
+
     def test_cat(self):
         _log = []
         def test_f(retval):
@@ -435,3 +502,31 @@ class CoreTest(TestCase):
             acc.append(e)
             return acc
         self.assertEquals([1, 2], transduce(take(2), completing(_a), [], [1, 2, 3, 4, 5]))
+
+
+def dumbEqual(expected, result, msg=None):
+    if expected != result:
+        raise AssertionError('{} != {}{}'.format(expected, result, '\nMessage: {}'.format(msg) if msg else ''))
+
+def assert_tx_default_0_1_arities(transducer):
+    # 0-arity
+    called = []
+    dumbEqual('whatever', transducer(lambda: called.append(True) or 'whatever')())
+    dumbEqual([True], called)
+
+    # 1-arity
+    called = []
+    dumbEqual('whatever', transducer(lambda r: called.append(r) or 'whatever')('result-(whatever)'))
+    dumbEqual(['result-(whatever)'], called, 'zz-top!')
+
+def assert_tx_default_bad_arity(transducer):
+    try:
+        transducer(None, None, None)
+    except TypeError, e:
+        if 'argument' not in str(e): # or indeed `arguments'
+            raise AssertionError('Unexpected (non-arguments error) message: {}', repr(str(e)))
+        return
+    raise AssertionError('Expected "TypeError" to be raised (for bad number of arguments).')
+
+def raiser(*a, **k):
+    raise AssertionError('Should never be called!')
