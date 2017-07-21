@@ -116,7 +116,7 @@ def filter(pred):
     FIXME: Only transducer-arity implemented!
 
     Returns a lazy sequence of the items in coll for which
-    (pred item) returns true. pred must be free of side-effects.
+    pred(item) returns true. pred must be free of side-effects.
     Returns a transducer when no collection is provided.
     """
     def _filter_xf(rf):
@@ -141,7 +141,7 @@ def remove(pred):
     FIXME: Only transducer-arity implemented!
 
     Returns a lazy sequence of the items in coll for which
-    (pred item) returns false. pred must be free of side-effects.
+    pred(item) returns false. pred must be free of side-effects.
     Returns a transducer when no collection is provided.
     """
     return filter(complement(pred))
@@ -170,6 +170,21 @@ def complement(f):
     def _complement(*a, **kw):
         return not f(*a, **kw)
     return _complement
+
+def juxt(*fns):
+    """
+    Takes a set of functions and returns a fn that is the juxtaposition
+    of those fns.  The returned fn takes a variable number of args, and
+    returns a list containing the result of applying each fn to the
+    args (left-to-right).
+    juxt(a, b, c)(x) => [a(x), b(x), c(x)]
+    """
+    def _juxt(*a, **kw):
+        def rf(acc, fn):
+            acc.append(fn(*a, **kw))
+            return acc
+        return reduce(rf, [], fns)
+    return _juxt
 
 def run(proc, coll):
     "Runs the supplied procedure, for purposes of side effects, on successive items in coll. Returns None."

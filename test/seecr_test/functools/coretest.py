@@ -2,7 +2,7 @@ from unittest import TestCase
 
 from copy import deepcopy, copy
 
-from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove
+from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove, juxt
 from seecr.functools.string import strip, split
 
 class CoreTest(TestCase):
@@ -29,6 +29,45 @@ class CoreTest(TestCase):
         self.assertEquals(None, second([1]))
         self.assertEquals(2, second([1, 2]))
         self.assertEquals(2, second([1, 2, 3]))
+
+    def testJuxt(self):
+        log = []
+        def fn_fn(id, retval):
+            def a_fn(*a, **kw):
+                log.append((id, a, kw))
+                return retval
+            return a_fn
+
+        # No fns
+        self.assertEquals([], juxt()())
+        self.assertEquals([], juxt()('arg1', 'arg2', kw='kwarg1'))
+
+        # 1 fn
+        _1 = fn_fn('1', 'rv-1')
+        self.assertEquals(['rv-1'], juxt(_1)('a1', kw='kw1'))
+        self.assertEquals([('1', ('a1',), {'kw': 'kw1'})], log)
+
+        log = []
+        # n-fns
+        _1 = fn_fn(1, [1, {}, set()])
+        _2 = fn_fn(2, 'rv-2')
+        _3 = fn_fn(3, ('stuff',))
+        j_fn = juxt(_1, _2, _3)
+        self.assertEquals([[1, {}, set()], 'rv-2', ('stuff',)], j_fn('a1', 2, kw='kw1', k3=3)) # in-order retvals
+        self.assertEquals(      # in-order called
+            [(1, ('a1', 2), {'k3': 3, 'kw': 'kw1'}),
+             (2, ('a1', 2), {'k3': 3, 'kw': 'kw1'}),
+             (3, ('a1', 2), {'k3': 3, 'kw': 'kw1'}),],
+            log)
+
+        # called again
+        log = []
+        self.assertEquals([[1, {}, set()], 'rv-2', ('stuff',)], j_fn())
+        self.assertEquals(      # in-order called
+            [(1, (), {}),
+             (2, (), {}),
+             (3, (), {}),],
+            log)
 
     def testSome_thread(self):
         def input_is(f, expected_val):
