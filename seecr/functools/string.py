@@ -1,4 +1,7 @@
+from __future__ import absolute_import
+
 from .core import reduce
+
 
 def strip(s, chars=None):
     """

@@ -1,5 +1,48 @@
+from __future__ import absolute_import
+
+import __builtin__
+
 from itertools import izip as _itertools_izip
 
+from .types import _not_found, ISeq, _Seq, _LazySeq, seq, rest, next
+
+#
+# re-defined builtins
+_builtin_next = __builtin__.next
+
+#
+# collection & seq basics
+def cons(x, seq):               # FIXME: Test Me
+    if (seq is None) or isinstance(seq, ISeq):
+        return _Seq(x, seq)
+    raise ValueError('seq must be an ISeq (ABC-registered class-instance) or None.')
+
+def lazy_seq(thunk):
+    return _LazySeq(thunk)
+
+def first(coll):                # FIXME: test for seq-stuff
+    if coll:
+        if isinstance(coll, ISeq):
+            return coll.first()
+        else:
+            for v in coll:
+                return v
+
+def second(iterable):           # FIXME: fix for seq's
+    if iterable:
+        iterable = iter(iterable)
+        _builtin_next(iterable, None)
+        return _builtin_next(iterable, None)
+
+def is_realized(s):             # FIXME: Test Me
+    return s.is_realized()
+
+# TODO: add & test:  rest, next, seq
+
+# TODO: nth, before, after, assoc / assoc_in, get / get_in
+
+#
+# reduced & helper-fns
 
 class reduced(object):
     """Sentinel wrapper from which terminal value can be retrieved. If received
@@ -42,8 +85,6 @@ def cat(rf):
             raise TypeError("_cat_step takes either 0, 1 or 2 arguments ({} given)".format(len(a)))
     return _cat_step
 
-_not_found = type('NOT_FOUND', (object,), {})()
-
 def reduce(*a):
     """
     reduce(f, coll)
@@ -65,7 +106,7 @@ def reduce(*a):
     if len(a) == 2:
         f, coll = a[0], iter(a[1])  # Only keep a reference to the iterator, so
         del a                       # processed items can be GC'ed iff relevant.
-        _1, _2 = next(coll, _not_found), next(coll, _not_found)
+        _1, _2 = _builtin_next(coll, _not_found), _builtin_next(coll, _not_found)
         if _1 is _not_found:
             return f()
         elif _2 is _not_found:
@@ -203,17 +244,6 @@ def interpose(sep):
         return _interpose_step
     return _interpose_xf
 
-def first(iterable):
-    if iterable:
-        for v in iterable:
-            return v
-
-def second(iterable):
-    if iterable:
-        iterable = iter(iterable)
-        next(iterable, None)
-        return next(iterable, None)
-
 # TODO: nth, before, after, assoc / assoc_in, get / get_in
 
 def _none_to_empty_list(coll):
@@ -306,6 +336,8 @@ def update_in(d, keypath, f, *args):
 def is_thruthy(x):
     return bool(x)
 
+#
+# Higher order fns
 def identity(x):
     return x
 
@@ -439,7 +471,7 @@ def take(*a):
             if n < 1:
                 return
             for _ in xrange(n):
-                yield next(coll)
+                yield _builtin_next(coll)
         return _take()
     else:
     	raise TypeError("take takes either 1 or 2 arguments ({} given)".format(len(a)))

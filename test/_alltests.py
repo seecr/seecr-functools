@@ -38,6 +38,7 @@ simplefilter('default')
 from seecr_test.functools.coretest import CoreTest
 from seecr_test.functools.wrangletest import WrangleTest
 from seecr_test.functools.stringtest import StringTest
+from seecr_test.functools.types.lazyseqtest import LazySeqTest
 
 
 if __name__ == '__main__':
