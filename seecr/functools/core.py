@@ -84,9 +84,12 @@ def reduce(*a):
             return accum_value.val
     return accum_value
 
-def map(f):
+def map(f, *colls):
     """
-    FIXME: Only transducer-arity implemented!
+    map(f)
+    map(c, coll)
+
+    FIXME: Only transducer-arity and 1-coll are implemented!
 
     Returns a lazy sequence consisting of the result of applying f to
     the set of first items of each coll, followed by applying f to the
@@ -95,21 +98,32 @@ def map(f):
     f should accept number-of-colls arguments. Returns a transducer when
     no collection is provided.
     """
-    def _map_xf(rf):
-        def _map_step(*a):
-            if len(a) == 0:
-                return rf()
-            elif len(a) == 1:
-                result, = a
-                return rf(result)
-            elif len(a) == 2:
-                result, input_ = a
-                return rf(result, f(input_))
-            else:               # > 2 - not a transducer-arity, so needs a wrapper to transform (result, input) to (result, input_1, ..., input_n).
-                result, inputs = a[0], a[1:]
-                return rf(result, f(*inputs))
-        return _map_step
-    return _map_xf
+    if len(colls) == 0:
+        def _map_xf(rf):
+            def _map_step(*a):
+                if len(a) == 0:
+                    return rf()
+                elif len(a) == 1:
+                    result, = a
+                    return rf(result)
+                elif len(a) == 2:
+                    result, input_ = a
+                    return rf(result, f(input_))
+                else:               # > 2 - not a transducer-arity, so needs a wrapper to transform (result, input) to (result, input_1, ..., input_n).
+                    result, inputs = a[0], a[1:]
+                    return rf(result, f(*inputs))
+            return _map_step
+        return _map_xf
+    elif len(colls) == 1:
+        coll = iter(colls[0])
+        del colls
+        def _map():
+            for x in coll:
+                yield f(x)
+        return _map()
+    else:
+        raise NotImplementedError('n-colls not yet implemented!')
+
 
 def filter(pred):
     """
@@ -158,6 +172,9 @@ def second(iterable):
         return next(iterable, None)
 
 # TODO: nth, before, after, assoc / assoc_in, get / get_in
+
+def is_thruthy(x):
+    return bool(x)
 
 def identity(x):
     return x

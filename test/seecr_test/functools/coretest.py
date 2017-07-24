@@ -2,7 +2,7 @@ from unittest import TestCase
 
 from copy import deepcopy, copy
 
-from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove, juxt
+from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove, juxt, is_thruthy
 from seecr.functools.string import strip, split
 
 class CoreTest(TestCase):
@@ -12,6 +12,21 @@ class CoreTest(TestCase):
         self.assertEquals(1, identity(1))
         o = object()
         self.assertTrue(o is identity(o))
+
+    def test_is_thruthy(self):
+        self.assertEquals(False, is_thruthy(0))
+        self.assertEquals(False, is_thruthy(''))
+        self.assertEquals(False, is_thruthy([]))
+        self.assertEquals(False, is_thruthy({}))
+        self.assertEquals(False, is_thruthy(None))
+        self.assertEquals(False, is_thruthy(False))
+
+        self.assertEquals(True, is_thruthy(1))
+        self.assertEquals(True, is_thruthy(-1))
+        self.assertEquals(True, is_thruthy('-'))
+        self.assertEquals(True, is_thruthy([0]))
+        self.assertEquals(True, is_thruthy({'x': 'y'}))
+        self.assertEquals(True, is_thruthy(True))
 
     def testFirst(self):
         self.assertEquals(None, first(None))
@@ -300,7 +315,7 @@ class CoreTest(TestCase):
             ),
             completing(_a), [], [1, 2, 3, 4, 5]))
 
-    def test_map(self):
+    def test_map_xf(self):
         # 0-arity
         called = []
         self.assertEquals('x', map(lambda: Hell)(lambda: called.append(True) or 'x')())
@@ -324,7 +339,21 @@ class CoreTest(TestCase):
         # with transduce
         self.assertEquals(27, transduce(map(lambda x: x + 10), completing(lambda acc, e: acc + e), 0, [5, 2]))
 
-    def test_filter(self):
+    def test_map_1coll(self):
+        plus = lambda x: x + 1
+        l = list
+
+        # empty coll - fn not called
+        self.assertEquals([], l(map(raiser, [])))
+
+        # 1-item
+        self.assertEquals([2], l(map(plus, [1])))
+        # 2-item
+        self.assertEquals([2, 3], l(map(plus, [1, 2])))
+        # n-item
+        self.assertEquals([11, 12, 13, 14], l(map(plus, [10, 11, 12, 13])))
+
+    def test_filter_xf(self):
         assert_tx_default_0_1_arities(filter(raiser))
         assert_tx_default_bad_arity(filter(raiser))
 
@@ -341,7 +370,7 @@ class CoreTest(TestCase):
         # with transduce
         self.assertEquals(4, transduce(filter(lambda x: (x % 2) == 1), completing(lambda acc, e: acc + e), 0, [1, 2, 3, 4]))
 
-    def test_remove(self):
+    def test_remove_xf(self):
         assert_tx_default_0_1_arities(remove(raiser))
         assert_tx_default_bad_arity(remove(raiser))
 
