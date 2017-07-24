@@ -298,8 +298,10 @@ def transduce(*a):
     transduce(xform, f, coll)
     transduce(xform, f, init, coll)
 
+    xform is a transducer.
+
     reduce with a transformation of f (xf). If init is not
-    supplied, (f) will be called to produce it. f should be a reducing
+    supplied, f() will be called to produce it. f should be a reducing
     step function that accepts both 1 and 2 arguments, if it accepts
     only 2 you can add the arity-1 with 'completing'. Returns the result
     of applying (the transformed) xf to init and the first item in coll,
