@@ -77,7 +77,6 @@ def reduce(*a):
     else:
         raise TypeError("reduce takes either 2 or 3 arguments ({} given)".format(len(a)))
 
-
     for x in coll:
         accum_value = f(accum_value, x)
         if is_reduced(accum_value):
@@ -172,6 +171,54 @@ def second(iterable):
         return next(iterable, None)
 
 # TODO: nth, before, after, assoc / assoc_in, get / get_in
+
+def _none_to_empty_list(coll):
+    return [] if coll is None else coll
+
+def append(*a):
+    """
+    append()
+    append(coll)
+    append(coll, *xs)
+
+    If coll is not given or None - uses the empty-mutable-list.
+    For each x in xs, calls the (side-effecting) append-method on coll; returns coll.
+    """
+    if len(a) == 0:
+        return []
+    elif len(a) == 1:
+        coll = _none_to_empty_list(a[0])
+    elif len(a) == 2:
+        coll, x = _none_to_empty_list(a[0]), a[1]
+        coll.append(x)
+    else:
+        coll, xs = _none_to_empty_list(a[0]), a[1:]
+        run(coll.append, xs)
+    return coll
+
+def _none_to_empty_str_or_str(s):
+    return "" if s is None else str(s)
+
+def _strng_rf(acc, e):
+    return _none_to_empty_str_or_str(acc) + _none_to_empty_str_or_str(e)
+
+def strng(*a):
+    """
+    strng()
+    strng(x)
+    strng(x, *xs)
+
+    With no args, returns the empty string. With one arg, returns
+    str(x).  strng(None) returns the empty string. With more than
+    one arg, returns the concatenation of the strng values of the args.
+    """
+    if len(a) == 0:
+        return ""
+    elif len(a) == 1:
+        s, = a
+        return _none_to_empty_str_or_str(s)
+    else:
+        return reduce(_strng_rf, a)
 
 def is_thruthy(x):
     return bool(x)

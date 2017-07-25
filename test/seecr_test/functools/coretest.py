@@ -2,8 +2,9 @@ from unittest import TestCase
 
 from copy import deepcopy, copy
 
-from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove, juxt, is_thruthy
+from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove, juxt, is_thruthy, append, strng
 from seecr.functools.string import strip, split
+
 
 class CoreTest(TestCase):
     def testIdentity(self):
@@ -44,6 +45,67 @@ class CoreTest(TestCase):
         self.assertEquals(None, second([1]))
         self.assertEquals(2, second([1, 2]))
         self.assertEquals(2, second([1, 2, 3]))
+
+    def test_append(self):
+        self.assertRaises(AttributeError, lambda: append(object()).append('x'))
+        self.assertRaises(AttributeError, lambda: append(object(), 'x'))
+
+        # 0-arity -> new list
+        self.assertEquals([], append())
+        self.assertFalse(append() is append()) # New list every o-arity invocation.
+
+        # 1-arity input == output
+        in_empty = []
+        in_12 = [1, 2]
+        self.assertEquals([], append(in_empty))
+        self.assertTrue(in_empty is append(in_empty))
+        self.assertEquals([1, 2], append(in_12))
+        self.assertTrue(in_12 is append(in_12))
+        o = object()            # not append-able
+        self.assertTrue(o is append(o))
+
+        # n-arity
+        in_a = ['a']
+        res = append(in_a, 'b')
+        self.assertEquals(['a', 'b'], res)
+        self.assertTrue(in_a is res) # Mutable type (expected & required for `append').
+        res = append(in_a, 'c', 'd')
+        self.assertEquals(['a', 'b', 'c', 'd'], res)
+        self.assertTrue(in_a is res)
+        res = append(append(in_empty, 1, 2), 3)
+        self.assertEquals([1, 2, 3], res)
+        self.assertTrue(in_empty is res)
+
+        # with 2-n args being None
+        self.assertEquals([None], append(None, None))
+        self.assertEquals([None], append([], None))
+        self.assertEquals([1, 2, None], append([1, 2], None))
+        self.assertEquals([1, 2, None, None], append([1, 2], None, None))
+
+    def test_strng(self):
+        class A(object):
+            def __str__(self):
+                return 'yes'
+            def __repr__(self):
+                return 'no'
+
+        # 0-arity
+        self.assertEquals("", strng())
+
+        # 1-arity
+        self.assertEquals("", strng(None))
+        self.assertEquals("False", strng(False)) # Pointless, but proves the point
+        self.assertEquals("", strng(""))
+        self.assertEquals("xx", strng("xx"))
+        self.assertEquals("xx", strng(u"xx"))
+        self.assertEquals("yes", strng(A()))
+
+        # n-arity
+        self.assertEquals("", strng(None, None))
+        self.assertEquals("", strng(None, None, None))
+        self.assertEquals("", strng("", "", ""))
+        self.assertEquals("aap, noot en mies.", strng("a", "ap", ", noot", " en mies."))
+        self.assertEquals("yesyesyes", strng(A(), None, A(), None, A()))
 
     def testJuxt(self):
         log = []
