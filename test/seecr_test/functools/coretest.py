@@ -2,7 +2,7 @@ from unittest import TestCase
 
 from copy import deepcopy, copy
 
-from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove, juxt, is_thruthy, append, strng
+from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove, juxt, is_thruthy, append, strng, trampoline, thrush, constantly, before, after
 from seecr.functools.string import strip, split
 
 
@@ -45,6 +45,142 @@ class CoreTest(TestCase):
         self.assertEquals(None, second([1]))
         self.assertEquals(2, second([1, 2]))
         self.assertEquals(2, second([1, 2, 3]))
+
+    def testThrush(self):
+        self.assertRaises(TypeError, lambda: thrush())
+
+        # Wrong or at least weird, but does not crash with this impl.:
+        self.assertEquals('a', thrush('a'))
+
+        self.assertEquals('a>', thrush('a', lambda v: v+'>'))
+        f = lambda v: v+'>'
+        self.assertEquals('a>>>!', thrush('a', f, f, f, lambda v: v+'!'))
+
+    def testConstantly(self):
+        f = constantly('x')
+        self.assertEquals('x', f())
+        self.assertEquals('x', f('a'))
+        self.assertEquals('x', f('a', k='w'))
+        self.assertEquals('x', f('a', 'b', k='w', k2='w2'))
+
+        f = constantly([{'zz'}])
+        self.assertEquals([{'zz'}], f())
+
+    def testTrampoline(self):
+        # Looks like fn application when fn return a non-fn
+        self.assertEquals('x', trampoline(identity, 'x'))
+        self.assertRaises(TypeError, lambda: trampoline(identity, 'x', 'y'))
+
+        # Calls fn (0-arity) if retval is a fn
+        self.assertEquals(('out', 'in', 'put'), trampoline(lambda _in, put: lambda: ('out', _in, put), 'in', 'put'))
+
+        # Keeps doing that until retval is not a fn
+        def mutual_recursion_until(stopNr, log):
+            def a(n):
+                (log is not None) and log.append(n)
+                if n >= stopNr:
+                    return n
+                return lambda: b(n + 1)
+
+            def b(n):
+                (log is not None) and log.append(n)
+                return lambda: a(n + 1)
+            return a, b, log
+
+        a, b, log = mutual_recursion_until(10, [])
+        self.assertEquals(10, trampoline(a, 0))
+        self.assertEquals(11, len(log))
+        self.assertEquals([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], log)
+
+        a, b, log = mutual_recursion_until(1002, None)
+        self.assertEquals(1002, trampoline(a, 0))
+        self.assertEquals(None, log)
+
+        # Mutual recursion without a trampoline #fail - because of missing TCO in Python.
+        def mutual_recursion_until_noTrampoline(stopNr):
+            def a(n):
+                if n >= stopNr:
+                    return n
+                return b(n + 1)
+            def b(n):
+                return a(n + 1)
+            return a, b
+
+        a, b = mutual_recursion_until_noTrampoline(10)
+        self.assertEquals(10, a(0))
+
+        a, b = mutual_recursion_until_noTrampoline(1002)
+        self.assertRaises(RuntimeError, lambda: a(0))
+
+    def testBefore(self):
+        log = []
+        def f(*a, **kw):
+            log.append(['f', a, kw])
+            return ['f', a, kw]
+
+        def g(*a, **kw):
+            log.append(['g', a, kw])
+            return ['g', a, kw]
+
+        g_before_f = before(f, g)
+        args = [(1,), {'k': 'v'}]
+        self.assertEquals(append(['f'], *args), g_before_f(1, k='v'))
+        self.assertEquals([append(['g'], *args), append(['f'], *args)], log)
+
+        # 2nd time -> called again
+        del log[:]
+        self.assertEquals(append(['f'], *args), g_before_f(1, k='v'))
+        self.assertEquals([append(['g'], *args), append(['f'], *args)], log)
+
+        # No args ok too
+        del log[:]
+        self.assertEquals(['f', (), {}], g_before_f())
+        self.assertEquals([['g', (), {}], ['f', (), {}]], log)
+
+        # before fn (g) only called for side-effects; retval ignored
+        def g(*a, **kw):
+            log.append(['g', a, kw])
+            return 'IGNORED'
+
+        del log[:]
+        g_before_f = before(f, g)
+        self.assertEquals(append(['f'], *args), g_before_f(1, k='v'))
+        self.assertEquals([append(['g'], *args), append(['f'], *args)], log)
+
+    def test_after(self):
+        log = []
+        def f(*a, **kw):
+            log.append(['f', a, kw])
+            return ['f', a, kw]
+
+        def g(*a, **kw):
+            log.append(['g', a, kw])
+            return ['g', a, kw]
+
+        g_after_f = after(f, g)
+        args = [(1,), {'k': 'v'}]
+        self.assertEquals(append(['f'], *args), g_after_f(1, k='v'))
+        self.assertEquals([append(['f'], *args), append(['g'], *args)], log)
+
+        # 2nd time -> called again
+        del log[:]
+        self.assertEquals(append(['f'], *args), g_after_f(1, k='v'))
+        self.assertEquals([append(['f'], *args), append(['g'], *args)], log)
+
+        # No args ok too
+        del log[:]
+        self.assertEquals(['f', (), {}], g_after_f())
+        self.assertEquals([['f', (), {}], ['g', (), {}]], log)
+
+        # after fn (g) only called for side-effects; retval ignored
+        def g(*a, **kw):
+            log.append(['g', a, kw])
+            return 'IGNORED'
+
+        del log[:]
+        g_after_f = after(f, g)
+        self.assertEquals(append(['f'], *args), g_after_f(1, k='v'))
+        self.assertEquals([append(['f'], *args), append(['g'], *args)], log)
 
     def test_append(self):
         self.assertRaises(AttributeError, lambda: append(object()).append('x'))

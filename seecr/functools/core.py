@@ -226,6 +226,47 @@ def is_thruthy(x):
 def identity(x):
     return x
 
+def constantly(x):
+    "Returns a function that takes any number of arguments and returns x."
+    def _constantly(*a, **kw):
+        return x
+
+    return _constantly
+
+def trampoline(f, *a, **kw):
+    ret = f(*a, **kw)
+    while callable(ret):
+        ret = ret()
+    return ret
+
+def thrush(*a):
+   "Thrush operator for python!  Should be called with an initial value and 1 or more fns to make sense."
+   # See: http://blog.fogus.me/2010/09/28/thrush-in-clojure-redux/
+   return reduce(lambda acc, fn: fn(acc), a)
+
+def before(f, g):
+    """"
+    Returns a fn calling advice-like fn g (with all args) before calling the primary fn f (also with all args).
+    Result of f will be returned.
+    """
+    def _before(*a, **kw):
+        g(*a, **kw)
+        return f(*a, **kw)
+
+    return _before
+
+def after(f, g):
+    """"
+    Returns a fn calling advice-like fn g (with all args) after calling the primary fn f (also with all args).
+    Result of f will be returned.
+    """
+    def _after(*a, **kw):
+        v = f(*a, **kw)
+        g(*a, **kw)
+        return v
+
+    return _after
+
 def complement(f):
     """
     Takes a fn f and returns a fn that takes the same arguments as f,
