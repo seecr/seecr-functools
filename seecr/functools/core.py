@@ -1,3 +1,5 @@
+from itertools import izip as _itertools_izip
+
 
 class reduced(object):
     """Sentinel wrapper from which terminal value can be retrieved. If received
@@ -86,9 +88,8 @@ def reduce(*a):
 def map(f, *colls):
     """
     map(f)
-    map(c, coll)
-
-    FIXME: Only transducer-arity and 1-coll are implemented!
+    map(f, coll)
+    map(f, coll, *colls)
 
     Returns a lazy sequence consisting of the result of applying f to
     the set of first items of each coll, followed by applying f to the
@@ -121,7 +122,12 @@ def map(f, *colls):
                 yield f(x)
         return _map()
     else:
-        raise NotImplementedError('n-colls not yet implemented!')
+        _coll_items = _itertools_izip(*map(iter, colls))
+        del colls
+        def _map():
+            for _t in _coll_items:
+                yield f(*_t)
+        return _map()
 
 
 def filter(pred):

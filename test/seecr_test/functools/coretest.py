@@ -538,6 +538,7 @@ class CoreTest(TestCase):
         self.assertEquals(27, transduce(map(lambda x: x + 10), completing(lambda acc, e: acc + e), 0, [5, 2]))
 
     def test_map_1coll(self):
+        # TODO: test lazyness when implemented (using lazy_seq)!
         plus = lambda x: x + 1
         l = list
 
@@ -550,6 +551,22 @@ class CoreTest(TestCase):
         self.assertEquals([2, 3], l(map(plus, [1, 2])))
         # n-item
         self.assertEquals([11, 12, 13, 14], l(map(plus, [10, 11, 12, 13])))
+
+    def test_map_Ncoll(self):
+        # TODO: test lazyness when implemented (using lazy_seq)!
+        plus = lambda _1, *a: plus(_1 + first(a), *a[1:]) if a else _1
+        l = list
+
+        # empty coll - fn not called
+        self.assertEquals([], l(map(raiser, [], [], [])))
+
+        # 1-item
+        self.assertEquals([2], l(map(plus, [1], [1, 99, 100, 101])))
+        # 2-item
+        self.assertEquals([1, 2], l(map(plus, [0, 0], [1, 2])))
+        # n-item
+        self.assertEquals([12, 13, 14, 15], l(map(plus, [1, 2, 3, 4], [4, 3, 2, 1], [7, 8, 9, 10])))
+        self.assertEquals([12, 13, 14, 15], l(map(plus, [1, 2, 3, 4], [4, 3, 2, 1, 'x', object()], [7, 8, 9, 10, None, None])))
 
     def test_filter_xf(self):
         assert_tx_default_0_1_arities(filter(raiser))
