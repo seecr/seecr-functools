@@ -159,6 +159,37 @@ def remove(pred):
     """
     return filter(complement(pred))
 
+def interpose(sep):
+    """
+    FIXME: Only transducer-arity implemented!
+
+    Returns a lazy seq of the elements of coll separated by sep.
+    Returns a stateful transducer when no collection is provided.
+    """
+    def _interpose_xf(rf):
+        started = [False]
+        def _interpose_step(*a):
+            if len(a) == 0:
+                return rf()
+            elif len(a) == 1:
+                result, = a
+                return rf(result)
+            elif len(a) == 2:
+                result, input_ = a
+                if started[0]:
+                    _sepr = rf(result, sep)
+                    if is_reduced(_sepr):
+                        return _sepr
+                    else:
+                        return rf(_sepr, input_)
+                else:
+                    started[0] = True
+                    return rf(result, input_)
+            else:
+                raise TypeError("interpose takes either 0, 1 or 2 arguments ({} given)".format(len(a)))
+        return _interpose_step
+    return _interpose_xf
+
 def first(iterable):
     if iterable:
         for v in iterable:

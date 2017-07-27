@@ -2,7 +2,7 @@ from unittest import TestCase
 
 from copy import deepcopy, copy
 
-from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove, juxt, is_thruthy, append, strng, trampoline, thrush, constantly, before, after
+from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove, juxt, is_thruthy, append, strng, trampoline, thrush, constantly, before, after, interpose
 from seecr.functools.string import strip, split
 
 
@@ -768,6 +768,66 @@ class CoreTest(TestCase):
             acc.append(e)
             return acc
         self.assertEquals([1, 2], transduce(take(2), completing(_a), [], [1, 2, 3, 4, 5]))
+
+    def test_interpose(self):
+        self.assertRaises(TypeError, lambda: interpose()) # sep(arator) required.
+        assert_tx_default_0_1_arities(interpose('-'))
+        assert_tx_default_bad_arity(interpose('-'))
+
+        # 2-arity - initial
+        _called = []
+        def log(r, i):
+            append(_called, (r, i))
+        def called():
+            c = _called[:]
+            del _called[:]
+            return c
+
+        ip = interpose('-')
+        rf = before(lambda r, i: 'res', log)
+        xf = ip(rf)             # stateful xf from here!
+        # 1st val (in == out)
+        self.assertEquals('res', xf('in', 'str'))
+        self.assertEquals([('in', 'str')], called())
+        # 2nd..n val (prepend interposed sep)
+        self.assertEquals('res', xf('in', 'in'))
+        self.assertEquals([('in', '-'), ('res', 'in')], called())
+        self.assertEquals('res', xf('in', 'g'))
+        self.assertEquals([('in', '-'), ('res', 'g')], called())
+
+        # next stateful xf -> initial not sep-prepended.
+        xf = ip(rf)
+        self.assertEquals('res', xf('in', 'a'))
+        self.assertEquals('res', xf('in', 'b'))
+        self.assertEquals('res', xf('in', 'c'))
+        self.assertEquals(['a', '-', 'b', '-', 'c'], list(map(second, called())))
+
+        # reduced handled ok - initial
+        ip = interpose(('thing'))
+        rf = before(lambda r, i: reduced('rres'), log)
+        xf = ip(rf)
+        ret = xf('in', 'a')
+        self.assertTrue(is_reduced(ret))
+        self.assertEquals('rres', unreduced(ret))
+        self.assertEquals([('in', 'a')], called())
+
+        # reduced handled ok - 2nd..n
+        _2nd = []
+        rf = before(lambda r, i: reduced('rres') if _2nd else (_2nd.append(True) or 'res'), log)
+        xf = ip(rf)
+        self.assertEquals('res', xf('in', 'a'))
+        self.assertEquals([('in', 'a')], called())
+        ret = xf('in', 'b')
+        self.assertTrue(is_reduced(ret))
+        self.assertEquals('rres', unreduced(ret))
+        self.assertEquals([('in', ('thing'))], called())
+
+        # with transduce
+        self.assertEquals('one', transduce(interpose('~>'), completing(strng), '', ['one']))
+        self.assertEquals('initial:one', transduce(interpose('~>'), completing(strng), 'initial:', ['one']))
+        self.assertEquals('one~>two~>three', transduce(interpose('~>'), completing(strng), '', ['one', 'two', 'three']))
+        self.assertEquals('initial:one~>two~>three', transduce(interpose('~>'), completing(strng), 'initial:', ['one', 'two', 'three']))
+        self.assertEquals('initial:one~>', transduce(comp(interpose('~>'), take(2)), completing(strng), 'initial:', ['one', 'two', 'three']))
 
 
 def dumbEqual(expected, result, msg=None):
