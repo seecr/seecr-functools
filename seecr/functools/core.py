@@ -165,6 +165,13 @@ def remove(pred):
     """
     return filter(complement(pred))
 
+def interleave(*colls):
+    _zipped_items = _itertools_izip(*colls)
+    del colls
+    for _colls_item in _zipped_items:
+        for i in _colls_item:
+            yield i
+
 def interpose(sep):
     """
     FIXME: Only transducer-arity implemented!

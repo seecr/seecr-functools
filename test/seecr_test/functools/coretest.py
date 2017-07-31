@@ -2,7 +2,7 @@ from unittest import TestCase
 
 from copy import deepcopy, copy
 
-from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove, juxt, is_thruthy, append, strng, trampoline, thrush, constantly, before, after, interpose
+from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove, juxt, is_thruthy, append, strng, trampoline, thrush, constantly, before, after, interpose, interleave
 from seecr.functools.string import strip, split
 
 
@@ -601,6 +601,21 @@ class CoreTest(TestCase):
 
         # with transduce
         self.assertEquals(4, transduce(remove(lambda x: (x % 2) == 0), completing(lambda acc, e: acc + e), 0, [1, 2, 3, 4]))
+
+    def test_interleave(self):
+        l = list
+
+        # empty
+        self.assertEquals([], l(interleave()))
+        self.assertEquals([], l(interleave([])))
+        self.assertEquals([], l(interleave([], [])))
+
+        # interleave
+        self.assertEquals([1, 'a', 2, 'b', 3, 'c'], l(interleave([1, 2, 3], ['a', 'b', 'c'])))
+
+        # shortest
+        self.assertEquals([1, 'a', 2, 'b'], l(interleave([1, 2, 3], ['a', 'b'])))
+        self.assertEquals([], l(interleave([], [1, 2, 3], ['a', 'b'])))
 
     def test_complement(self):
         called = []
