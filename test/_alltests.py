@@ -36,6 +36,7 @@ from warnings import simplefilter
 simplefilter('default')
 
 from seecr_test.functools.coretest import CoreTest
+from seecr_test.functools.wrangletest import WrangleTest
 from seecr_test.functools.stringtest import StringTest
 
 
