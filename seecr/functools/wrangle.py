@@ -23,7 +23,8 @@ def fix(x, *clauses):           # similar to: https://github.com/amalloy/useful 
     remaining = list(clauses)
     while remaining:
         if len(remaining) == 1:
-            return remaining[0]
+            fn = remaining[0]
+            return fn(x) if callable(fn) else fn
 
         test, fn, remaining = remaining[0], remaining[1], remaining[2:]
         if (test(x) if callable(test) else test): # test | test(x) -> truthyness!

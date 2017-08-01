@@ -3,6 +3,7 @@ from unittest import TestCase
 from copy import deepcopy
 
 from seecr.functools.core import before, fpartial, append
+from seecr.functools.string import strip
 from seecr.functools.wrangle import fix, to_fix
 
 
@@ -11,6 +12,15 @@ class WrangleTest(TestCase):
         x = object()
         def not_this_one():
             self.fail('Oh no!')
+
+
+        def sole_function(x):
+            return "should see this"
+
+        # Last clause if uneven is non-conditionally executed if reached.
+        self.assertEquals("a", fix(" a   ", lambda x: None, lambda x:None, strip))
+        self.assertEquals(42, fix(" a   ", lambda x: True, lambda x: 42, strip))
+        self.assertEquals("should see this", fix("a", sole_function))
 
         # Any value can be `fixed'
         self.assertEquals(None, fix(None))
