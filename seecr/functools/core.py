@@ -264,6 +264,45 @@ def strng(*a):
     else:
         return reduce(_strng_rf, a)
 
+def _set_or_update_target_d(d, keypath):
+    path, leaf = keypath[:-1], keypath[-1]
+    target_d = d
+    if path:
+        for i, p in enumerate(path):
+            target_d = target_d.setdefault(p, {})
+            if not isinstance(target_d, dict):
+                raise ValueError('At path {} value {} is not a dict.'.format(path[:i+1], repr(target_d)))
+
+    return target_d, leaf
+
+def assoc(d, k, v, *kvs):
+    if (len(kvs) % 2) != 0:
+        raise TypeError('Uneven number of kvs')
+
+    remaining = append([k, v], *kvs)
+    while remaining:
+        k, v, remaining = remaining[0], remaining[1], remaining[2:]
+        d[k] = v
+
+    return d
+
+def assoc_in(d, keypath, v):
+    target_d, leaf = _set_or_update_target_d(d, keypath)
+    target_d[leaf] = v
+    return d
+
+def assoc_in_when(d, keypath, v):
+    "assoc-in only when v is not None"
+    if v is not None:
+        return assoc_in(d, keypath, v)
+
+    return d
+
+def update_in(d, keypath, f, *args):
+    target_d, leaf = _set_or_update_target_d(d, keypath)
+    target_d[leaf] = f(target_d.get(leaf), *args)
+    return d
+
 def is_thruthy(x):
     return bool(x)
 

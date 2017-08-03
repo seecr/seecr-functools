@@ -2,7 +2,7 @@ from unittest import TestCase
 
 from copy import deepcopy, copy
 
-from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove, juxt, is_thruthy, append, strng, trampoline, thrush, constantly, before, after, interpose, interleave
+from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove, juxt, is_thruthy, append, strng, trampoline, thrush, constantly, before, after, interpose, interleave, assoc_in, update_in, assoc, assoc_in_when
 from seecr.functools.string import strip, split
 
 
@@ -65,6 +65,142 @@ class CoreTest(TestCase):
 
         f = constantly([{'zz'}])
         self.assertEquals([{'zz'}], f())
+
+    def testUpdate_in_oldValue(self):
+        # No old-value
+        log = []
+        self.assertEquals({'a': 'x'}, update_in({}, ['a'], lambda o: (log.append(o) or 'x')))
+        self.assertEquals([None], log)
+
+        # None old-value
+        log = []
+        self.assertEquals({'a': 'x'}, update_in({'a': None}, ['a'], lambda o: (log.append(o) or 'x')))
+        self.assertEquals([None], log)
+
+        # Some old-value
+        log = []
+        self.assertEquals({'a': 'x'}, update_in({'a': 'old'}, ['a'], lambda o: (log.append(o) or 'x')))
+        self.assertEquals(['old'], log)
+        log = []
+        self.assertEquals({'a': 'x'}, update_in({'a': {'nested': ['old']}}, ['a'], lambda o: (log.append(o) or 'x')))
+        self.assertEquals([{'nested': ['old']}], log)
+
+        # Deeper nested - no old
+        log = []
+        self.assertEquals({'a': {'b': {'c': 'new', 'z': 'zz'}}}, update_in({'a': {'b': {'z': 'zz'}}}, ['a', 'b', 'c'], lambda o: (log.append(o) or 'new')))
+        self.assertEquals([None], log)
+
+        # Deeper nested - old
+        log = []
+        self.assertEquals({'a': {'b': {'c': 'new'}}}, update_in({'a': {'b': {'c': 'old'}}}, ['a', 'b', 'c'], lambda o: (log.append(o) or 'new')))
+        self.assertEquals(['old'], log)
+
+    def testUpdate_in_moreArgs(self):
+        # Deeper nested - no old, 1 extra args
+        log = []
+        self.assertEquals(
+            {'a': {'b': {'c': 'new', 'z': 'zz'}}},
+            update_in({'a': {'b': {'z': 'zz'}}}, ['a', 'b', 'c'], lambda o, *args: (log.append((o, args)) or 'new'), 2))
+        self.assertEquals([(None, (2,))], log)
+
+        # Deeper nested - old, n-extra args
+        log = []
+        self.assertEquals({'a': {'b': {'c': 'new'}}}, update_in({'a': {'b': {'c': 'old'}}}, ['a', 'b', 'c'], lambda o, *args: (log.append((o, args)) or 'new'), 2, 3, 4))
+        self.assertEquals([('old', (2, 3, 4))], log)
+
+    def testAssoc(self):
+        self.assertEquals({'k': 'v'}, assoc({}, 'k', 'v'))
+        self.assertEquals({'k': [{tuple()}]}, assoc({}, 'k', [{tuple()}]))
+        self.assertEquals({'k': 'v2'}, assoc({'k': 'v'}, 'k', 'v2'))
+        self.assertEquals({'k': 'v', 'a': 'b', 'x': 'y'}, assoc({'k': 'v'}, 'a', 'b', 'x', 'y'))
+
+        self.assertRaises(TypeError, lambda: assoc({}, 'k'))
+        try:
+            assoc({}, 'k', 'v', 'a')
+            self.fail()
+        except TypeError, e:
+            self.assertEquals('Uneven number of kvs', str(e))
+
+        self.assertRaises(TypeError, lambda: assoc({}, 'k', 'v', 'a', 'v', 'b'))
+
+    def testAssoc_in_emptyDict(self):
+        self.assertEquals({'a': 'v'}, assoc_in({}, keypath=['a'], v='v'))
+        self.assertEquals({'a': {'b': 'v'}}, assoc_in({}, ['a', 'b'], 'v'))
+        self.assertEquals({'a': {'b': {'c': 'v'}}}, assoc_in({}, ['a', 'b', 'c'], 'v'))
+
+    def testAssoc_in_disjointDict(self):
+        self.assertEquals(
+            {'a': 'v', 'z': ['what', 'ever']},
+            assoc_in({'z': ['what', 'ever']}, keypath=['a'], v='v'))
+        self.assertEquals(
+            {'a': {'b': 'v'}, 'z': 'x'},
+            assoc_in({'z': 'x'}, ['a', 'b'], 'v'))
+
+    def testAssoc_in_overlapDict(self):
+        self.assertEquals(
+            {'a': {'b': 'v'}},
+            assoc_in({'a': {}}, ['a', 'b'], 'v'))
+        self.assertEquals(
+            {'a': {'b': 'v', 'z': 'x'}},
+            assoc_in({'a': {'z': 'x'}}, ['a', 'b'], 'v'))
+        self.assertEquals(
+            {'a': {'b': {'c': 'v'}}},
+            assoc_in({'a': {}}, ['a', 'b', 'c'], 'v'))
+        self.assertEquals(
+            {'a': {'b': {'c': 'v', 'z': 'zz'},
+                   'y': 'yy'},
+             'x': 'xx'},
+            assoc_in(
+                {
+                    'a': {'b': {'z': 'zz'},
+                          'y': 'yy'},
+                    'x': 'xx',
+                }, ['a', 'b', 'c'], 'v'))
+
+    def testAssoc_in_overwriteVal(self):
+        self.assertEquals(
+            {'a': 'v'},
+            assoc_in({'a': 'will-be-overwritten'}, ['a'], 'v'))
+        self.assertEquals(
+            {'a': 'v'},
+            assoc_in({'a': {'nested': 'val'}}, ['a'], 'v'))
+        self.assertEquals(
+            {'a': 'v'},
+            assoc_in({'a': ['nested', 'val']}, ['a'], 'v'))
+        self.assertEquals(
+            {'a': {'b': 'NEW',
+                   'y': 'yy'},
+             'x': 'xx'},
+            assoc_in(
+                {
+                    'a': {'b': 'NEW',
+                          'y': 'yy'},
+                    'x': 'xx',
+                }, ['a', 'b'], 'NEW'))
+
+    def testAssoc_in_pathAcrossNonDicts(self):
+        try:
+            assoc_in({'a': 'no-dict'}, ['a', 'b'], 'v')
+        except ValueError, e:
+            self.assertEquals("At path ['a'] value 'no-dict' is not a dict.", str(e))
+        else: self.fail()
+
+        try:
+            assoc_in({'a': 'no-dict'}, ['a', 'b', 'c'], 'v')
+        except ValueError, e:
+            self.assertEquals("At path ['a'] value 'no-dict' is not a dict.", str(e))
+        else: self.fail()
+
+        try:
+            assoc_in({'a': {'b': 'no-dict'}}, ['a', 'b', 'c'], 'v')
+        except ValueError, e:
+            self.assertEquals("At path ['a', 'b'] value 'no-dict' is not a dict.", str(e))
+        else: self.fail()
+
+    def testAssoc_in_when(self):
+        self.assertEquals({}, assoc_in_when({}, ['x', 'y'], None))
+        self.assertEquals({'x': {'y': False}}, assoc_in_when({}, ['x', 'y'], False))
+        self.assertEquals({'x': {'y': 'z'}}, assoc_in_when({}, ['x', 'y'], 'z'))
 
     def testTrampoline(self):
         # Looks like fn application when fn return a non-fn
