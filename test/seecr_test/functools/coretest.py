@@ -1,9 +1,17 @@
+from __future__ import absolute_import
+
+import __builtin__
+
 from unittest import TestCase
 
 from copy import deepcopy, copy
+from types import GeneratorType
 
-from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove, juxt, is_thruthy, append, strng, trampoline, thrush, constantly, before, after, interpose, interleave, assoc_in, update_in, assoc, assoc_in_when
+from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove, juxt, is_thruthy, append, strng, trampoline, thrush, constantly, before, after, interpose, interleave, assoc_in, update_in, assoc, assoc_in_when, sequence
 from seecr.functools.string import strip, split
+
+builtin_next = __builtin__.next
+l = list
 
 
 class CoreTest(TestCase):
@@ -996,6 +1004,131 @@ class CoreTest(TestCase):
         self.assertEquals('one~>two~>three', transduce(interpose('~>'), completing(strng), '', ['one', 'two', 'three']))
         self.assertEquals('initial:one~>two~>three', transduce(interpose('~>'), completing(strng), 'initial:', ['one', 'two', 'three']))
         self.assertEquals('initial:one~>', transduce(comp(interpose('~>'), take(2)), completing(strng), 'initial:', ['one', 'two', 'three']))
+
+    def test_sequence(self):
+        _log = []
+        def log():
+            l = _log[:]
+            del _log[:]
+            return l
+
+        class log_iter(object):
+            def __init__(self, in_):
+                self._iterrable = iter(in_)
+            def __iter__(self):
+                return self
+            def next(self):
+                try:
+                    v = self._iterrable.next()
+                except StopIteration:
+                    append(_log, 'coll-done')
+                    raise
+                else:
+                    append(_log, v)
+                    return v
+
+        def assert_sqnc(expected_res_log, *sequence_args):
+            def rf(acc, res_log):
+                seq_rest = acc
+                exp_res, exp_log = res_log
+                res = builtin_next(seq_rest, 's-done')
+                self.assertEquals(exp_res, res)
+                self.assertEquals(exp_log, log())
+                return seq_rest
+
+            if not expected_res_log:
+                self.fail('expected_res_log must have >= 1 enties.  End-of-sequence is signaled by "s-done" for sequence-output and "coll-done" for a consumed seq / iterable.')
+
+            if len(sequence_args) == 1:
+                init = sequence(log_iter(sequence_args[0]))
+            elif len(sequence_args) == 2:
+                init = sequence(sequence_args[0], log_iter(sequence_args[1]))
+            else:
+                self.fail('Unexpected sequence_args')
+
+            return reduce(rf, init, expected_res_log)
+
+        # no xform, empty-coll
+        self.assertEquals(GeneratorType, type(sequence(None)))
+        self.assertEquals([], l(sequence(None)))
+        self.assertEquals([], l(sequence([])))
+        self.assertEquals([], l(sequence(())))
+        self.assertEquals([], l(sequence(iter(()))))
+
+        # no xform, 1-coll
+        self.assertEquals(GeneratorType, type(sequence([1])))
+        self.assertEquals([1], l(sequence([1])))
+        self.assertEquals([1], l(sequence((1,))))
+
+        # no xform, n-coll
+        self.assertEquals(['a', 'b'], l(sequence((x for x in ['a', 'b']))))
+        self.assertEquals([1, 2, 3], l(sequence([1, 2, 3])))
+
+        # xform, empty-coll
+        self.assertEquals(GeneratorType, type(sequence(take(1), None)))
+        self.assertEquals([], l(sequence(take(1), None)))
+        self.assertEquals([], l(sequence(take(1), [])))
+        self.assertEquals([], l(sequence(take(1), ())))
+        self.assertEquals([], l(sequence(take(1), iter(()))))
+
+        # xform, 1-coll
+        self.assertEquals(GeneratorType, type(sequence(take(1), [1])))
+        self.assertEquals([], l(sequence(take(0), [1])))
+        self.assertEquals([], l(sequence(take(0), (1,))))
+        self.assertEquals([1], l(sequence(take(1), [1])))
+        self.assertEquals([1], l(sequence(take(1), (1,))))
+
+        # xform, n-coll
+        self.assertEquals(['a'], l(sequence(take(1), (x for x in ['a', 'b']))))
+        self.assertEquals([1, 2], l(sequence(take(3), [1, 2])))
+        self.assertEquals([1, 2, 3], l(sequence(take(3), [1, 2, 3])))
+        self.assertEquals([1, 2, 3], l(sequence(take(3), [1, 2, 3, 4])))
+
+        # (no-xform) lazy / as-late-as-possible realization of input "coll"
+        g_empty = (x for x in [])
+        g_1 = (x for x in [1])
+        g_n = (x for x in [1, 2, 3])
+
+        assert_sqnc([('s-done', ['coll-done'])], g_empty)
+        assert_sqnc([(1, [1]), ('s-done', ['coll-done'])], g_1)
+        assert_sqnc([(1, [1]), (2, [2]), (3, [3]), ('s-done', ['coll-done'])], g_n)
+
+        # xform-ed lazy / as-late-as-possible realization of input "coll"
+        g_empty_fn = lambda: (x for x in [])
+        g_1_fn = lambda: (x for x in [1])
+        g_n_fn = lambda: (x for x in [1, 2, 3])
+
+        assert_sqnc([('s-done', ['coll-done'])], take(0), g_empty_fn())
+        assert_sqnc([('s-done', ['coll-done'])], take(1), g_empty_fn())
+        assert_sqnc([('s-done', [1])], take(0), g_1_fn())
+        assert_sqnc([(1, [1]), ('s-done', [])], take(1), g_1_fn())
+        assert_sqnc([(1, [1]), ('s-done', ['coll-done'])], take(2), g_1_fn())
+        assert_sqnc([(1, [1]), ('s-done', [])], take(1), g_n_fn())
+        assert_sqnc([(1, [1]), (2, [2]), ('s-done', [])], take(2), g_n_fn())
+        assert_sqnc([(1, [1]), (2, [2]), (3, [3]), ('s-done', [])], take(3), g_n_fn())
+        assert_sqnc([(1, [1]), (2, [2]), (3, [3]), ('s-done', ['coll-done'])], take(4), g_n_fn())
+
+        # xform "closing remarks" 1-arity for xf-step called before final buffer-outputs generated.
+        def party(rf):
+            def _party_step(*a):
+                if len(a) == 0:
+                    return rf()
+                elif len(a) == 1:
+                    result, = a
+                    self.assertEquals(None, result)
+                    rf(result, 'parrr')
+                    rf(result, 'ty!')
+                    return rf(result)
+                else:           # len(a) == 2
+                    result, input_ = a
+                    return rf(result, input_)
+            return _party_step
+
+        self.assertEquals(['parrr', 'ty!'], l(sequence(party, None)))
+        self.assertEquals(['parrr', 'ty!'], l(sequence(party, [])))
+        self.assertEquals([1, 'parrr', 'ty!'], l(sequence(party, [1])))
+        self.assertEquals([1, 2, 'parrr', 'ty!'], l(sequence(party, [1, 2])))
+        assert_sqnc([(1, [1]), (2, [2]), ('parrr', []), ('ty!', []), ('s-done', [])], comp(take(2), party), g_n_fn())
 
 
 def dumbEqual(expected, result, msg=None):

@@ -512,3 +512,66 @@ def transduce(*a):
     _f = xform(f)
     ret = reduce(_f, init, coll)
     return _f(ret)
+
+def sequence(*a):
+    """
+    sequence(coll)
+    sequence(xform, coll)
+    sequence(xform, coll, *colls)
+
+    FIXME: returns a generator for now i.s.o. a lazy-seq!
+    FIXME: only (coll) and (xform, coll) arities are currently implemented!
+
+    Coerces coll to a (possibly empty) sequence, if it is not already one.
+    Will not force a lazy seq. (sequence None) yields an empty sequence,
+    When a transducer is supplied, returns a lazy sequence of applications of
+    the transform to the items in coll(s), i.e. to the set of first
+    items of each coll, followed by the set of second
+    items in each coll, until any one of the colls is exhausted.
+    Any remaining items in other colls are ignored.
+
+    The transform should accept number-of-colls arguments!
+    """
+    if len(a) == 1:
+        coll, = a
+        del a
+        if coll is None:
+            return (_ for _ in ())
+
+        coll = iter(coll)
+        return (_x for _x in coll)
+    elif len(a) == 2:
+        xform, coll = a
+        del a
+        coll = (_ for _ in ()) if coll is None else iter(coll)
+        _output = []
+        def _sequence_step(*a):
+            if len(a) == 0:
+                pass
+            elif len(a) == 1:
+                result, = a
+                return result
+            elif len(a) == 2:
+                result, input_ = a
+                append(_output, input_)
+            else:
+                raise TypeError("_sequence_step takes either 0, 1 or 2 arguments ({} given)".format(len(a)))
+
+        def _():
+            xf = xform(_sequence_step)
+            for input_ in coll:
+                maybe_reduced = xf(None, input_)
+                if is_reduced(maybe_reduced):
+                    break
+                else:
+                    for _o in _output:
+                        yield _o
+                    del _output[:]
+
+            xf(None)
+            for _o in _output:
+                yield _o
+            del _output[:]
+        return _()
+    else:
+        raise TypeError("sequence takes either 1 or 2 arguments ({} given)".format(len(a)))
