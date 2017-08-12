@@ -310,38 +310,103 @@ class LazySeqTest(TestCase):
             pass
 
         _raised = []
+        def raised():
+            r = _raised[:]
+            del _raised[:]
+            return r
+
+        _wrapper_called = []
+        def wrapper_called():
+            w = _wrapper_called[:]
+            del _wrapper_called[:]
+            return w
+
         def in_between():
             if not _raised:
                 _raised.append(True)
                 raise FancyException('Very Fancy')
 
+            _raised.append('NOT GOOD')
+            raise AssertionError('NOT GOOD')
+
         def raiser():
             return in_between()
 
+        #
+        # 1st thunk -> error
         s_one = lazy_seq(raiser)
+        def _1st_thunk_errs():
+            _wrapper_called.append(True)
+            try:
+                seq(s_one)
+                self.fail('should not happen')
+            except FancyException, e:
+                c, v, t = exc_info()
+                self.assertEquals(FancyException, c)
+                self.assertEquals(v, e)
+                self.assertEquals('Very Fancy', str(e))
+                names = []
+                while t:
+                    names.append(t.tb_frame.f_code.co_name)
+                    t = t.tb_next
+                self.assertEquals(['_1st_thunk_errs', 'seq', 'seq', 'raiser', 'in_between'], names)
+
+            else:
+                self.fail('Should not happen')
+
+        # 1st-call
+        _1st_thunk_errs()
+        self.assertEquals([True], wrapper_called())
+        self.assertEquals([True], raised())
+
+        # 2nd-call
+        _1st_thunk_errs()       # only 1st call reaches erring-thunk, 2..n reraises cached error.
+        self.assertEquals([True], wrapper_called())
+        self.assertEquals([], raised())
+
+        # 3rd-call - more of the same.
+        _1st_thunk_errs()
+        self.assertEquals([True], wrapper_called())
+        self.assertEquals([], raised())
+
+        #
+        # 2nd thunk -> error
         s_two = lazy_seq(lambda: cons(1, lazy_seq(raiser)))
+        def _2nd_thunk_errs():
+            _wrapper_called.append(True)
+            will_fail = rest(s_two)
+            try:
+                first(will_fail)
+                self.fail('should not happen')
+            except FancyException, e:
+                c, v, t = exc_info()
+                self.assertEquals(FancyException, c)
+                self.assertEquals(v, e)
+                self.assertEquals('Very Fancy', str(e))
+                names = []
+                while t:
+                    names.append(t.tb_frame.f_code.co_name)
+                    t = t.tb_next
+                # self.assertEquals(['_1st_thunk_errs', 'seq', 'seq', 'raiser', 'in_between'], names)
+                self.assertEquals(['_2nd_thunk_errs', 'first', 'first', 'seq', 'raiser', 'in_between'], names)
 
-        try:
-            seq(s_one)
-            self.fail('should not happen')
-        except FancyException, e:
-            c, v, t = exc_info()
-            self.assertEquals(FancyException, c)
-            self.assertEquals(v, e)
-            self.assertEquals('Very Fancy', str(e))
-            names = []
-            while t:
-                names.append(t.tb_frame.f_code.co_name)
-                t = t.tb_next
-            self.assertEquals(['test_error_from_fn_saved_and_reraised', 'seq', 'seq', 'raiser', 'in_between'], names)
+            else:
+                self.fail('Should not happen')
 
-        # FIXME: test _raised & not re-raising iff called again - but is so iff lazy-seq'ed.
-        self.fail()
+        # 1st-call
+        _2nd_thunk_errs()
+        self.assertEquals([True], wrapper_called())
+        self.assertEquals([True], raised())
+
+        # 2nd-call
+        _2nd_thunk_errs()       # only 1st call reaches erring-thunk, 2..n reraises cached error.
+        self.assertEquals([True], wrapper_called())
+        self.assertEquals([], raised())
+
 
 _fib2 = None                    # global used in `test_recursive_fib'
 
 # TODO:
-# 1.5. one raised error -> keeps getting reraised!
 # 2. Recusion/multiple-lazy-seqs does not use:
 #    - stack space
 # 2.5. chained non-value lazy-seq's do not use > 1x stack-space when realizing the next value (see sval / seq impl of Clojure LazySeq)

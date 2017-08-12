@@ -168,7 +168,7 @@ class _LazySeq(object):
         except BaseException:
             _c, _v, _t = exc_info()
             if getattr(fn, '__not_raised__', True):
-                _r = _functools_partial(_reraise, _c, _v, _t)
+                _r = _functools_partial(_reraise, _c, _v, _t.tb_next)  # shave one tb-layer off, since re-raising goes through here anyway.
                 _r.__not_raised__ = False
                 _obj_setattr(self, '_fn', _r)
 
