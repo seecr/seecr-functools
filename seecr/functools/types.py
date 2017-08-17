@@ -1,9 +1,5 @@
 # TODO:
-#  - is_realized(seq)
-#    * With exception iff asking some non-seq?
-#  - lazy_seq(thunk)
-#    Clojure Semantics, but as a thunk (0-arity fn / callback) which will produce a
-#  - lazy_from_iter()
+#  - lazy_from_iter()  # and/or generator --> user needs to be careful that its not a **composed-generator**, same as with other iterator-consuming-code.
 from __future__ import absolute_import
 
 from sys import exc_info
@@ -104,12 +100,15 @@ class __EmptyPersistentSinglyLinkedList(object):
     def next_(self):
         return None
 
+    def next(self):
+        # The <iterator>.next() variant
+        raise StopIteration()
+
     def rest(self):
         return self
 
     def __iter__(self):
-        return
-        yield
+        return self
 
 _EmptyPersistentSinglyLinkedList = __EmptyPersistentSinglyLinkedList() # Singleton
 
@@ -129,7 +128,7 @@ class _Seq(object):
         return self
 
     def next_(self):
-        return seq_first(self._more)
+        return seq(self._more) # FIXME: next -> rest-ish
 
     def rest(self):
         m = self._more

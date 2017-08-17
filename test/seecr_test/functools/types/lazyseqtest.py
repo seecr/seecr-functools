@@ -6,12 +6,25 @@ import __builtin__
 
 from itertools import permutations
 from sys import exc_info
+from weakref import WeakValueDictionary
 
 from seecr.functools.core import lazy_seq, cons, first, rest, next, seq, run, is_realized
 from seecr.functools.types import ISeq, _EmptyPersistentSinglyLinkedList, _LazySeq, _Seq
 
+l = list
+
 
 class LazySeqTest(TestCase):
+    def test_smells_immutable(self):
+        # object.__setattr__(...) still works, but if you ignore common-sense ...
+        o = lazy_seq(lambda: None)
+        self.assertRaises(TypeError, lambda: setattr(o, 'somename', 'a-value'))
+        try:
+            del o.somename
+        except TypeError:
+            pass
+        else: self.fail()
+
     def test_empty_via_None(self):
         thunk = lambda: None
 
@@ -402,6 +415,55 @@ class LazySeqTest(TestCase):
         _2nd_thunk_errs()       # only 1st call reaches erring-thunk, 2..n reraises cached error.
         self.assertEquals([True], wrapper_called())
         self.assertEquals([], raised())
+
+    def test_iff_not_holding_on_to_your_head_seq_parts_garbarge_collected(self):
+        # helpers
+        def iterate(f, x):      # FIXME: test & add to core?
+            "Returns a lazy sequence of x, (f x), (f (f x)) etc. f must be free of side-effects"
+            return lazy_seq(lambda: cons(x, iterate(f, f(x))))
+
+        def nthrest(coll, n):   # FIXME test & add to core?
+            "Returns the nth rest of coll, coll when n is 0."
+            xs = coll
+            while n > 0 and seq(xs):
+                n -= 1
+                xs = rest(xs)
+            return xs
+
+        _iv = WeakValueDictionary()
+        def indexed_values():
+            ivs = _iv.items()
+            del _iv[:]
+            return sorted(ivs)
+        def add_iv(i, v):
+            _iv[i] = v
+
+        class refable(object):
+            def __init__(self, v):
+                self.v = v
+
+        # finite, with referencable values
+        def to_10():
+            def _step(n):
+                def _():
+                    if n == 10:
+                        return None
+                    return cons(refable(n), _step(n + 1))
+            return lazy_seq(_step)
+
+        _0 = to_10()
+        add_iv(0, _0)
+        self.fail('TODO: CONTINUE TESTING HERE')
+
+        # infinite
+        def to_infinity_and_beyound():
+            return iterate(lambda x: x + 1, 0)
+
+        # (mutual-)recursion & infinite
+        def ping():
+            return lazy_seq(lambda: cons('ping', pong()))
+        def pong():
+            return lazy_seq(lambda: cons('pong', ping()))
 
 
 _fib2 = None                    # global used in `test_recursive_fib'

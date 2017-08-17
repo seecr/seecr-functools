@@ -36,9 +36,11 @@ from warnings import simplefilter
 simplefilter('default')
 
 from seecr_test.functools.coretest import CoreTest
-from seecr_test.functools.wrangletest import WrangleTest
 from seecr_test.functools.stringtest import StringTest
+from seecr_test.functools.types.emptypersistentsinglylinkedlisttest import EmptyPersistentSinglyLinkedListTest
 from seecr_test.functools.types.lazyseqtest import LazySeqTest
+from seecr_test.functools.types.seqtest import SeqTest
+from seecr_test.functools.wrangletest import WrangleTest
 
 
 if __name__ == '__main__':
