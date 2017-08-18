@@ -4,7 +4,7 @@ from unittest import TestCase
 
 import __builtin__
 
-from seecr.functools.core import cons, first, rest, next, seq
+from seecr.functools.core import cons, first, rest, next, seq, run
 from seecr.functools.types import ISeq, _EmptyPersistentSinglyLinkedList, _Seq, seq_first
 
 l = list
@@ -98,35 +98,64 @@ class SeqTest(TestCase):
         # non "ISeq-or-None" value errs in cons, **not** when calling _Seq(...) directly!
         obj = object()
         nested = _Seq('nested', None)
+        two = _Seq(2, None)
         pairs = [               # ((val, ISeq-or-None), cons-error-expected-boolean, result-iff-no-expected-error)
             # 1-val
-            ((None, None) False, [None]),
-            (('a', None) False, ['a']),
-            ((obj, None) False, [obj]),
-            ((nested, None) False, [nested]),
+            ((None, None), False, [None]),
+            (('a', None), False, ['a']),
+            ((obj, None), False, [obj]),
+            ((nested, None), False, [nested]),
 
-            # 2-val  TODO: hier verder
-
-            # n-val
+            # 2..n-val
+            ((None, two), False, [None, 2]),
+            (('a', two), False, ['a', 2]),
+            ((obj, two), False, [obj, 2]),
+            ((nested, two), False, [nested, 2]),
+            ((nested, _Seq(nested, two)), False, [nested, nested, 2]),
 
             # bad-val
+            ((None, obj), True, None),
+            (('a', False), True, None),
+            (('a', ()), True, None),
+            (('a', set()), True, None),
+            ((obj, 0), True, None),
+            ((nested, []), True, None),
         ]
-        self.fail()
+        def assert_pair(t):
+            args, cons_err_or_none, expected = t
+            # cons
+            if cons_err_or_none:
+                try:
+                    cons(*args)
+                    self.fail()
+                except ValueError:
+                    pass
+
+            else:
+                self.assertEquals(expected, l(cons(*args)))
+
+            # _Seq
+            if not cons_err_or_none:  # Undefined behaviour for invalid _Seq "more" / rest; so don't try to test.
+                self.assertEquals(expected, l(_Seq(*args)))
+
+        run(assert_pair, pairs)
 
     def test_iter(self):
-        self.fail('TODO: Hier verder')
-
-        self.assertEquals([], l(e))
-        self.assertEquals([], l(e)) # Immutable type ...
-        self.assertEquals(iter(e), iter(e)) # ... and iterator, since a stateful-cursor always being empty == stateless empty.
+        self.assertEquals([None], l(_Seq(None, None)))
+        self.assertEquals([1], l(_Seq(1, None)))
+        self.assertEquals([1, 2], l(_Seq(1, _Seq(2, None))))
+        _123 = cons(1, cons(2, cons(3, None)))
+        _123_iter = iter(_123)
+        self.assertEquals([1, 2, 3], l(_123_iter))
+        self.assertEquals([], l(_123_iter)) # stateful cursor - can only iterate once.
+        self.assertEquals([], l(_123_iter)) # lazy-seq can be (re-)iterated
 
     def test_smells_immutable(self):
-        self.fail('TODO: Hier verder')
-
         # object.__setattr__(...) still works, but if you ignore common-sense ...
-        self.assertRaises(TypeError, lambda: setattr(e, 'somename', 'a-value'))
+        s = _Seq(1, None)
+        self.assertRaises(TypeError, lambda: setattr(s, 'somename', 'a-value'))
         try:
-            del e.somename
+            del s.somename
         except TypeError:
             pass
         else: self.fail()

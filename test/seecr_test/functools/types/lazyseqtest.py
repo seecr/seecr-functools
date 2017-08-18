@@ -4,11 +4,13 @@ from unittest import TestCase
 
 import __builtin__
 
+from gc import collect, get_objects
+from inspect import stack
 from itertools import permutations
 from sys import exc_info
 from weakref import WeakValueDictionary
 
-from seecr.functools.core import lazy_seq, cons, first, rest, next, seq, run, is_realized
+from seecr.functools.core import lazy_seq, cons, first, rest, next, seq, run, is_realized, reduce
 from seecr.functools.types import ISeq, _EmptyPersistentSinglyLinkedList, _LazySeq, _Seq
 
 l = list
@@ -101,7 +103,7 @@ class LazySeqTest(TestCase):
              _rst)
 
     def test_two_val(self):
-        def test(s, rest_1_type, rest_2_val):
+        def test(s, rest_1_type, next_1_type, rest_2_val):
             for _ in range(2):
                 self.assertEquals([42, 43],  list(seq(s)))
                 self.assertEquals(42, first(s))
@@ -109,35 +111,43 @@ class LazySeqTest(TestCase):
                 self.assertEquals(rest_2_val, rest(rest(s)))
                 self.assertEquals(43, first(rest(s)))
                 self.assertEquals(None, first(rest(rest(s))))
-                self.assertEquals(43, next(s))
+                self.assertEquals(next_1_type, type(next(s)))
                 self.assertEquals(None, next(rest(s)))
 
         test(lazy_seq(lambda: cons(42, cons(43, None))),
              _Seq,
+             _Seq,
              _EmptyPersistentSinglyLinkedList)
         test(lazy_seq(lambda: cons(42, lazy_seq(lambda: cons(43, None)))),
              _LazySeq,
+             _Seq,
              _EmptyPersistentSinglyLinkedList)
         test(lazy_seq(lambda: cons(42, cons(43, _EmptyPersistentSinglyLinkedList))),
+             _Seq,
              _Seq,
              _EmptyPersistentSinglyLinkedList)
         test(lazy_seq(lambda: cons(42, lazy_seq(lambda: cons(43, _EmptyPersistentSinglyLinkedList)))),
              _LazySeq,
+             _Seq,
              _EmptyPersistentSinglyLinkedList)
         _rst = lazy_seq(lambda: None)
         test(lazy_seq(lambda: cons(42, cons(43, _rst))),
              _Seq,
+             _Seq,
              _rst)
         _rst = lazy_seq(lambda: _EmptyPersistentSinglyLinkedList)
         test(lazy_seq(lambda: cons(42, cons(43, _rst))),
              _Seq,
+             _Seq,
              _rst)
         test(lazy_seq(lambda: cons(42, lazy_seq(lambda: cons(43, _rst)))),
              _LazySeq,
+             _Seq,
              _rst)
         _rst = lazy_seq(lambda: _EmptyPersistentSinglyLinkedList)
         test(lazy_seq(lambda: cons(42, lazy_seq(lambda: cons(43, _rst)))),
              _LazySeq,
+             _Seq,
              _rst)
 
     def test_fully_lazy_evaluation(self):
@@ -167,7 +177,7 @@ class LazySeqTest(TestCase):
         # 2nd value  "   "        "   "   "    "
         self.assertEquals(2, first(s2))
         self.assertEquals([2], realized())
-        self.assertEquals(2, next(s))
+        self.assertEquals(2, first(next(s)))
         s3 = rest(s2)
 
         # Same goes for __iter__ -> iterable
@@ -241,7 +251,7 @@ class LazySeqTest(TestCase):
         self.assertEquals([1], called())
         self.assertEquals(_LazySeq, type(rest(count_to(3))))
         self.assertEquals([1], called())
-        self.assertEquals(2, next(count_to(3)))
+        self.assertEquals(_Seq, type(next(count_to(3))))
         self.assertEquals([1, 2], called())
         self.assertEquals(_Seq, type(seq(count_to(3))))
         self.assertEquals([1], called())
@@ -260,6 +270,14 @@ class LazySeqTest(TestCase):
             s = rest(s)
 
         self.assertEquals(['ping', 'pong', 'ping', 'pong', 'ping', 'pong'], r)
+
+    def test_nested_lazy_seq_without_actual_seq_value(self):
+        # gets shaved off one val at-a-time
+        def rf(acc, _):
+            return lazy_seq(lambda: acc)
+        init = lazy_seq(lambda: cons(('done', None), None)) # len(stack())
+        s = reduce(rf, init, xrange(2000))
+        self.assertEquals(('done', -1), l(s))
 
     def test_recursive_fib(self):
         # Sorry, some more fun.
@@ -430,17 +448,14 @@ class LazySeqTest(TestCase):
                 xs = rest(xs)
             return xs
 
-        _iv = WeakValueDictionary()
-        def indexed_values():
-            ivs = _iv.items()
-            del _iv[:]
-            return sorted(ivs)
-        def add_iv(i, v):
-            _iv[i] = v
-
         class refable(object):
             def __init__(self, v):
                 self.v = v
+
+        def refable_s():
+            collect()
+            l = get_objects()
+            return sorted((o.v for o in l if type(o) is refable))
 
         # finite, with referencable values
         def to_10():
@@ -449,21 +464,57 @@ class LazySeqTest(TestCase):
                     if n == 10:
                         return None
                     return cons(refable(n), _step(n + 1))
-            return lazy_seq(_step)
+                return lazy_seq(_)
+            return _step(0)
 
-        _0 = to_10()
-        add_iv(0, _0)
-        self.fail('TODO: CONTINUE TESTING HERE')
+        _pre_0 = to_10()
+
+        self.assertEquals([], refable_s())
+        rest(_pre_0)
+        self.assertEquals([0], refable_s())
+        next(rest(_pre_0))
+        self.assertEquals([0, 1, 2], refable_s())
+
+        _pre_1 = rest(_pre_0)
+        del _pre_0                  # GC -> Bye 0!
+
+        self.assertEquals([1, 2], refable_s())
+
+        _pre_9 = nthrest(_pre_1, 8)
+        self.assertEquals([1, 2, 3, 4, 5, 6, 7, 8], refable_s())
+        next(_pre_9)
+        self.assertEquals([1, 2, 3, 4, 5, 6, 7, 8, 9], refable_s())
+        self.assertEquals([9], [v.v for v in l(_pre_9)])
+        del v                   # ... because list-comprehension var-scope-in-enclosing is @%!&%#@!
+
+        del _pre_1                  # GC -> Bye 0..8!
+        self.assertEquals([9], refable_s())
+
+        _2nd_pre_9 = nthrest(to_10(), 9)
+        first(_2nd_pre_9)
+        self.assertEquals([9, 9], refable_s())
+
+        del _pre_9              # GC -> Bye 9!
+        self.assertEquals([9], refable_s())
+
+        del _2nd_pre_9              # GC -> Bye last 9!
+        self.assertEquals([], refable_s())
 
         # infinite
         def to_infinity_and_beyound():
             return iterate(lambda x: x + 1, 0)
 
-        # (mutual-)recursion & infinite
-        def ping():
-            return lazy_seq(lambda: cons('ping', pong()))
-        def pong():
-            return lazy_seq(lambda: cons('pong', ping()))
+        os_pre = len(get_objects())
+        rest_start = nthrest(to_infinity_and_beyound(), 20000)
+        rest_and_five = nthrest(rest_start, 5)
+        os_5 = len(get_objects())
+        del rest_start
+        del rest_and_five
+        os_post = len(get_objects())
+
+        self.assertEquals(0, os_post - os_pre)
+        _5mem = (os_5 - os_pre)
+        self.assertTrue(10 < _5mem < 20)  # about 16...
 
 
 _fib2 = None                    # global used in `test_recursive_fib'

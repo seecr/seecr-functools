@@ -25,9 +25,15 @@ class ISeq(object):
     __metaclass__ = ABCMeta
 
 # Overwritten builtins & associated
-def seq(s):
-    if s is not None:
-        return s.seq()
+def seq(coll):
+    """
+    Returns a seq on the collection. If the collection is
+    empty, returns None.  (seq None) returns None.
+
+    seq also works on strings, (python) lists, iterables or dictionaries (iff they implement iteritems).
+    """
+    if coll is not None:
+        return coll.seq()
 
 def next(coll):
     if coll is not None:
