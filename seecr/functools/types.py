@@ -152,52 +152,65 @@ class _Seq(object):
 
 
 class _LazySeq(object):
-    __slots__ = ('_fn', '_v', '_seq')
+    __slots__ = ('_fn', '_seq_or_exc')
     __setattr__ = _no_setattr
     __delattr__ = _no_delattr
 
     def __init__(self, fn):
         _obj_setattr(self, '_fn', fn)
-        _obj_setattr(self, '_seq',  _not_found)
+        # _obj_setattr(self, '_seq_or_exc', ()) # FIXME: no setting!
 
     def first(self):
         return seq_first(self.seq())
 
+    def seq(self):
+        realized, exc_fn, v = self._seq_step()
+        if realized is True:    # Recorded history, only convey to caller.
+            if exc_fn is not None:
+                return exc_fn() # Always raises
+            return v            # v -> always a `seq'
+
+        record_history = set()
+        while isinstance(v, _LazySeq) and (realized is False): # FIXME: |
+            record_history.add(v)
+            if exc_fn is not None:
+                break
+
+            realized, exc_fn, v = v._seq_step()       # FIXME: \--> THINK: can realized value of intermediate be used, or not?
+
+        if (exc_fn is None) and (realized is False):
+            exc_fn, v = self._exc_fn(seq, v)
+
+        for ls_ in record_history:
+            # print 'ls_', repr(ls_)
+            _obj_setattr(ls_, '_fn', None)
+            _obj_setattr(ls_, '_seq_or_exc', (exc_fn, v))
+
+        if exc_fn is not None:
+            return exc_fn()
+
+        return v
+
     def _seq_step(self):
         fn = self._fn
         if fn is None:
-            if self._seq is _not_found:
-                return (False, self._v)
-            else:
-                return (True, self._seq)
+            exc_fn, seq_ = self._seq_or_exc
+            return (True, exc_fn, seq_)
 
+        exc_fn, v = self._exc_fn(fn)
+        return (False, exc_fn, v)
+
+    @staticmethod
+    def _exc_fn(f, *a):
+        """
+        calls f with given arguments, return (exc_fn, retval) - either exc_fn or retval will be None.
+        """
         try:
-            v = fn()
+            v = f(*a)
         except BaseException:
             _c, _v, _t = exc_info()
-            if getattr(fn, '__not_raised__', True):
-                _r = _functools_partial(_reraise, _c, _v, _t.tb_next)  # shave one tb-layer off, since re-raising goes through here anyway.
-                _r.__not_raised__ = False
-                _obj_setattr(self, '_fn', _r)
-
-            raise _c, _v, _t
-        else:
-            _obj_setattr(self, '_fn', None)
-            _obj_setattr(self, '_v', v)
-
-        return (False, v)
-
-    def seq(self):
-        realized, v = self._seq_step()
-        if realized is True:
-            return v
-
-        while isinstance(v, _LazySeq): # FIXME: |
-            _, v = v._seq_step()       # FIXME: \--> THINK: can realized value of intermediate be used, or not?
-
-        v = seq(v)
-        _obj_setattr(self, '_seq', v)
-        return v
+            return (_functools_partial(_reraise, _c, _v, _t.tb_next), None)  # shave one tb-layer off, since this wrapper conveys no additional information.
+        return (None, v)
 
     def next_(self):
         return next(self.seq())

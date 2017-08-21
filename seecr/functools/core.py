@@ -13,12 +13,21 @@ _builtin_next = __builtin__.next
 
 #
 # collection & seq basics
-def cons(x, seq):               # FIXME: Test Me
-    if (seq is None) or isinstance(seq, ISeq):
-        return _Seq(x, seq)
+def cons(x, seq_):               # FIXME: Test Me
+    """
+    Returns a new seq where x is the first element and seq is the rest; seq must be in ISeq ABC-registered `instance' or implement __iter__ (≈ iterable or generator) or iteritems (dict-like).
+    """
+    if (seq_ is None) or isinstance(seq_, ISeq):
+        return _Seq(x, seq_)
     raise ValueError('seq must be an ISeq (ABC-registered class-instance) or None.')
 
+    # if (seq_ is None) or isinstance(seq_, ISeq):
+    #     return _Seq(x, seq_)
+    # raise ValueError('seq must be an ISeq (ABC-registered class-instance) or None.')
+
 def lazy_seq(thunk):
+    if not callable(thunk):
+        raise ValueError('thunk must be a callable 0-arity fn') # FIXME: Test Me
     return _LazySeq(thunk)
 
 def first(coll):                # FIXME: test for seq-stuff
