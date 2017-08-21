@@ -152,21 +152,24 @@ class _Seq(object):
 
 
 class _LazySeq(object):
-    __slots__ = ('_fn', '_seq')
+    __slots__ = ('_fn', '_v', '_seq')
     __setattr__ = _no_setattr
     __delattr__ = _no_delattr
 
     def __init__(self, fn):
         _obj_setattr(self, '_fn', fn)
-        _obj_setattr(self, '_seq',  None)
+        _obj_setattr(self, '_seq',  _not_found)
 
     def first(self):
         return seq_first(self.seq())
 
-    def seq(self):
+    def _seq_step(self):
         fn = self._fn
         if fn is None:
-            return self._seq
+            if self._seq is _not_found:
+                return (False, self._v)
+            else:
+                return (True, self._seq)
 
         try:
             v = fn()
@@ -180,9 +183,17 @@ class _LazySeq(object):
             raise _c, _v, _t
         else:
             _obj_setattr(self, '_fn', None)
+            _obj_setattr(self, '_v', v)
 
-        while isinstance(v, _LazySeq):
-            v = v.seq()
+        return (False, v)
+
+    def seq(self):
+        realized, v = self._seq_step()
+        if realized is True:
+            return v
+
+        while isinstance(v, _LazySeq): # FIXME: |
+            _, v = v._seq_step()       # FIXME: \--> THINK: can realized value of intermediate be used, or not?
 
         v = seq(v)
         _obj_setattr(self, '_seq', v)
