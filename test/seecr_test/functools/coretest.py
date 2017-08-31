@@ -7,7 +7,7 @@ from unittest import TestCase
 from copy import deepcopy, copy
 from types import GeneratorType
 
-from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove, juxt, is_thruthy, append, strng, trampoline, thrush, constantly, before, after, interpose, interleave, assoc_in, update_in, assoc, assoc_in_when, sequence
+from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove, juxt, is_thruthy, append, strng, trampoline, thrush, constantly, before, after, interpose, interleave, assoc_in, update_in, assoc, assoc_in_when, sequence, get_in
 from seecr.functools.string import strip, split
 
 builtin_next = __builtin__.next
@@ -73,6 +73,39 @@ class CoreTest(TestCase):
 
         f = constantly([{'zz'}])
         self.assertEquals([{'zz'}], f())
+
+    def testGet_in(self):
+        # empty keypath: in->out
+        self.assertEquals({}, get_in({}, []))
+
+        # non-existing path
+        self.assertEquals(None, get_in({}, ['a']))
+        self.assertEquals(None, get_in({}, ['a', 'b', 'c']))
+
+        # existing path
+        self.assertEquals('X', get_in({'a': 'X'}, ['a']))
+        self.assertEquals({'b': 'bb'}, get_in({'a': {'b': 'bb'}}, ['a']))
+        self.assertEquals('bb', get_in({'a': {'b': 'bb'}}, ['a', 'b']))
+
+        # tail does not exist
+        self.assertEquals(None, get_in({'a': {'b': 'X'}}, ['a', 'y']))
+        self.assertEquals(None, get_in({'a': {'b': {'c': 'X'}}}, ['a', 'b', 'y', 'z']))
+
+        # other default
+        self.assertEquals('not-found', get_in({}, ['a', 'b', 'y', 'z'], 'not-found'))
+
+        # errors (along path not dicts)
+        try:
+            get_in({'a': 'X'}, ['a', 'b'])
+        except ValueError, e:
+            self.assertEquals("At path ['a'] value 'X' is not a dict.", str(e))
+        else: self.fail()
+
+        try:
+            get_in({'a': {'b': {'c': 'X'}}}, ['a', 'b', 'c', 'd'])
+        except ValueError, e:
+            self.assertEquals("At path ['a', 'b', 'c'] value 'X' is not a dict.", str(e))
+        else: self.fail()
 
     def testUpdate_in_oldValue(self):
         # No old-value

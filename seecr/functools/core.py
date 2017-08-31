@@ -215,6 +215,16 @@ def second(iterable):
         return next(iterable, None)
 
 # TODO: nth, before, after, assoc / assoc_in, get / get_in
+def get_in(d, keypath, default=None):
+    cur = d
+    for i, p in enumerate(keypath):
+        if not isinstance(cur, dict):
+            raise ValueError('At path {} value {} is not a dict.'.format(keypath[:i], repr(cur)))
+
+        cur = cur.get(p, _not_found)
+        if cur is _not_found:
+            return default
+    return cur
 
 def _none_to_empty_list(coll):
     return [] if coll is None else coll
