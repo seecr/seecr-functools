@@ -1,7 +1,7 @@
 from unittest import TestCase
 
 from seecr.functools.core import reduce, reduced, completing, transduce, is_reduced, unreduced
-from seecr.functools.string import strip, split
+from seecr.functools.string import strip, rstrip, split
 
 
 class StringTest(TestCase):
@@ -9,8 +9,19 @@ class StringTest(TestCase):
         # On a string
         self.assertEquals('', strip('', None))
         self.assertEquals('', strip(' \t\r\n \t\r\n '))
+        self.assertEquals('AA', strip(' \t\r\n AA \t\r\n '))
         self.assertEquals('', strip(' \t\r\n \t\r\n ', None))
         self.assertEquals('\t\r\n ', strip('\t\r\n x', 'x'))
+        self.assertEquals(' \t\r\n ', strip('x \t\r\n x', 'x'))
+
+    def test_rstrip(self):
+        # On a string
+        self.assertEquals('', rstrip('', None))
+        self.assertEquals('', rstrip(' \t\r\n \t\r\n '))
+        self.assertEquals(' \t\r\n AA', rstrip(' \t\r\n AA \t\r\n '))
+        self.assertEquals('', rstrip(' \t\r\n \t\r\n ', None))
+        self.assertEquals('\t\r\n ', rstrip('\t\r\n x', 'x'))
+        self.assertEquals('x \t\r\n ', rstrip('x \t\r\n x', 'x'))
 
     def test_split(self):
         # Bad args

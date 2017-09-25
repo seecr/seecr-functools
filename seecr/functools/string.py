@@ -2,9 +2,15 @@ from .core import reduce
 
 def strip(s, chars=None):
     """
-    Return a string with leading and trailing characters removed. If chars is None, whitespace characters are removed. If given chars must be a string; the characters in the string will be stripped from the both ends of the string.
+    Return a string with leading and trailing characters removed. If chars is None, whitespace characters are removed. If given chars must be a string (or unicode).
     """
     return s.strip(chars)
+
+def rstrip(s, chars=None):
+    """
+    Return a string with trailing characters removed. If chars is None, whitespace characters are removed. If given chars must be a string (or unicode).
+    """
+    return s.rstrip(chars)
 
 def split(s, sep, maxsplit=-1):
     """
