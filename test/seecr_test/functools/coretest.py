@@ -7,7 +7,7 @@ from unittest import TestCase
 from copy import deepcopy, copy
 from types import GeneratorType
 
-from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove, juxt, is_thruthy, append, strng, trampoline, thrush, constantly, before, after, interpose, interleave, assoc_in, update_in, assoc, assoc_in_when, sequence, get_in
+from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove, juxt, is_thruthy, append, strng, trampoline, thrush, constantly, before, after, interpose, interleave, assoc_in, update_in, assoc, assoc_in_when, sequence, get_in, assoc_when
 from seecr.functools.string import strip, split
 
 builtin_next = __builtin__.next
@@ -163,6 +163,13 @@ class CoreTest(TestCase):
             self.assertEquals('Uneven number of kvs', str(e))
 
         self.assertRaises(TypeError, lambda: assoc({}, 'k', 'v', 'a', 'v', 'b'))
+
+    def testAssoc_when(self):
+        self.assertEquals({}, assoc_when({}, 'x', None))
+        self.assertEquals({'x': False}, assoc_when({}, 'x', False))
+        self.assertEquals({'x': False}, assoc_when({}, 'x', 0))
+        self.assertEquals({'z': []}, assoc_when({}, 'z', []))
+        self.assertEquals({'x': 'z'}, assoc_when({}, 'x', 'z'))
 
     def testAssoc_in_emptyDict(self):
         self.assertEquals({'a': 'v'}, assoc_in({}, keypath=['a'], v='v'))

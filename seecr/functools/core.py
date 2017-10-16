@@ -296,6 +296,13 @@ def assoc(d, k, v, *kvs):
 
     return d
 
+def assoc_when(d, k, v):
+    "assoc-in only when v is not None"
+    # TODO: support *kvs args too (as assoc does)
+    if v is not None:
+        return assoc(d, k, v)
+    return d
+
 def assoc_in(d, keypath, v):
     target_d, leaf = _set_or_update_target_d(d, keypath)
     target_d[leaf] = v
