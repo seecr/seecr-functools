@@ -1,3 +1,27 @@
+## begin license ##
+#
+# Seecr Functools a set of various functional tools
+#
+# Copyright (C) 2017 Seecr (Seek You Too B.V.) http://seecr.nl
+#
+# This file is part of "Seecr Functools"
+#
+# "Seecr Functools" is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# "Seecr Functools" is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with "Seecr Functools"; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+#
+## end license ##
+
 from __future__ import absolute_import
 
 import __builtin__
@@ -47,6 +71,11 @@ class CoreTest(TestCase):
         g = (x for x in [42])
         self.assertEquals(42, first(g))
 
+        self.assertEquals('-', first(None, default='-'))
+        self.assertEquals('-', first([], default='-'))
+        self.assertEquals('-', first((x for x in []), default='-'))
+
+
     def testSecond(self):
         self.assertEquals(None, second(None))
         self.assertEquals(None, second([]))
@@ -94,17 +123,27 @@ class CoreTest(TestCase):
         # other default
         self.assertEquals('not-found', get_in({}, ['a', 'b', 'y', 'z'], 'not-found'))
 
-        # errors (along path not dicts)
+        # errors
         try:
             get_in({'a': 'X'}, ['a', 'b'])
-        except ValueError, e:
-            self.assertEquals("At path ['a'] value 'X' is not a dict.", str(e))
+        except TypeError, e:
+            self.assertEquals("string indices must be integers, not str (on accessing ['a', 'b'] in {'a': 'X'})", str(e))
         else: self.fail()
 
         try:
             get_in({'a': {'b': {'c': 'X'}}}, ['a', 'b', 'c', 'd'])
-        except ValueError, e:
-            self.assertEquals("At path ['a', 'b', 'c'] value 'X' is not a dict.", str(e))
+        except TypeError, e:
+            self.assertEquals("string indices must be integers, not str (on accessing ['a', 'b', 'c', 'd'] in {'a': {'b': {'c': 'X'}}})", str(e))
+        else: self.fail()
+
+        # index in list
+        self.assertEquals('a', get_in(['a', 'b'], [0]))
+        self.assertEquals('not-found', get_in(['a', 'b'], [3], default='not-found'))
+        self.assertEquals('c', get_in({'a': ['b', 'c']}, ['a', 1]))
+        try:
+            self.assertEquals('c', get_in({'a': ['b', 'c']}, ['a', 'b']))
+        except TypeError, e:
+            self.assertEquals("list indices must be integers, not str (on accessing ['a', 'b'] in {'a': ['b', 'c']})", str(e))
         else: self.fail()
 
     def testUpdate_in_oldValue(self):

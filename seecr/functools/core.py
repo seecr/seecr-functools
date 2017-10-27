@@ -1,3 +1,27 @@
+## begin license ##
+#
+# Seecr Functools a set of various functional tools
+#
+# Copyright (C) 2017 Seecr (Seek You Too B.V.) http://seecr.nl
+#
+# This file is part of "Seecr Functools"
+#
+# "Seecr Functools" is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# "Seecr Functools" is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with "Seecr Functools"; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+#
+## end license ##
+
 from itertools import izip as _itertools_izip
 
 
@@ -203,10 +227,11 @@ def interpose(sep):
         return _interpose_step
     return _interpose_xf
 
-def first(iterable):
+def first(iterable, default=None):
     if iterable:
         for v in iterable:
             return v
+    return default
 
 def second(iterable):
     if iterable:
@@ -215,16 +240,28 @@ def second(iterable):
         return next(iterable, None)
 
 # TODO: nth, before, after, assoc / assoc_in, get / get_in
-def get_in(d, keypath, default=None):
-    cur = d
-    for i, p in enumerate(keypath):
-        if not isinstance(cur, dict):
-            raise ValueError('At path {} value {} is not a dict.'.format(keypath[:i], repr(cur)))
 
-        cur = cur.get(p, _not_found)
-        if cur is _not_found:
+def get_in(o, key, default=None):
+    """
+    Returns the value in a nested structure of objects (that implement __getitem__), where
+    key can be a single value key or list of keys. Returns None or the default value
+    if specified if the key is not present.
+    """
+    keys = key if hasattr(key, 'append') else [key]
+    if o is None:
+        return default
+    v = o
+    for i, key in enumerate(keys):
+        if v is None:
             return default
-    return cur
+        try:
+            v = v[key]
+        except (IndexError, KeyError):
+            return default
+        except TypeError, e:
+            raise TypeError(str(e) + ' (on accessing %s in %s)' % (repr(keys[:i+1]), repr(o)))
+    return v
+
 
 def _none_to_empty_list(coll):
     return [] if coll is None else coll
