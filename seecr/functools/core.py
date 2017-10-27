@@ -357,8 +357,9 @@ def update_in(d, keypath, f, *args):
     target_d[leaf] = f(target_d.get(leaf), *args)
     return d
 
-def is_thruthy(x):
-    return bool(x)
+truthy = bool
+def falsy(o):
+    return not o
 
 def identity(x):
     return x

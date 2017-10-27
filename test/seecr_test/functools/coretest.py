@@ -31,7 +31,7 @@ from unittest import TestCase
 from copy import deepcopy, copy
 from types import GeneratorType
 
-from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove, juxt, is_thruthy, append, strng, trampoline, thrush, constantly, before, after, interpose, interleave, assoc_in, update_in, assoc, assoc_in_when, sequence, get_in, assoc_when
+from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove, juxt, truthy, append, strng, trampoline, thrush, constantly, before, after, interpose, interleave, assoc_in, update_in, assoc, assoc_in_when, sequence, get_in, assoc_when
 from seecr.functools.string import strip, split
 
 builtin_next = __builtin__.next
@@ -46,20 +46,20 @@ class CoreTest(TestCase):
         o = object()
         self.assertTrue(o is identity(o))
 
-    def test_is_thruthy(self):
-        self.assertEquals(False, is_thruthy(0))
-        self.assertEquals(False, is_thruthy(''))
-        self.assertEquals(False, is_thruthy([]))
-        self.assertEquals(False, is_thruthy({}))
-        self.assertEquals(False, is_thruthy(None))
-        self.assertEquals(False, is_thruthy(False))
+    def test_truthy(self):
+        self.assertEquals(False, truthy(0))
+        self.assertEquals(False, truthy(''))
+        self.assertEquals(False, truthy([]))
+        self.assertEquals(False, truthy({}))
+        self.assertEquals(False, truthy(None))
+        self.assertEquals(False, truthy(False))
 
-        self.assertEquals(True, is_thruthy(1))
-        self.assertEquals(True, is_thruthy(-1))
-        self.assertEquals(True, is_thruthy('-'))
-        self.assertEquals(True, is_thruthy([0]))
-        self.assertEquals(True, is_thruthy({'x': 'y'}))
-        self.assertEquals(True, is_thruthy(True))
+        self.assertEquals(True, truthy(1))
+        self.assertEquals(True, truthy(-1))
+        self.assertEquals(True, truthy('-'))
+        self.assertEquals(True, truthy([0]))
+        self.assertEquals(True, truthy({'x': 'y'}))
+        self.assertEquals(True, truthy(True))
 
     def testFirst(self):
         self.assertEquals(None, first(None))
