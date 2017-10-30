@@ -241,17 +241,16 @@ def second(iterable):
 
 # TODO: nth, before, after, assoc / assoc_in, get / get_in
 
-def get_in(o, key, default=None):
+def get_in(o, keypath, default=None):
     """
-    Returns the value in a nested structure of objects (that implement __getitem__), where
-    key can be a single value key or list of keys. Returns None or the default value
-    if specified if the key is not present.
+    Returns the value in a nested associative structure (that implement __getitem__),
+    where keypath is a (possibly empty) iterable collection of keys. Returns None if the key
+    is not present, or the default value if supplied.
     """
-    keys = key if hasattr(key, 'append') else [key]
     if o is None:
         return default
     v = o
-    for i, key in enumerate(keys):
+    for i, key in enumerate(keypath):
         if v is None:
             return default
         try:
@@ -259,7 +258,7 @@ def get_in(o, key, default=None):
         except (IndexError, KeyError):
             return default
         except TypeError, e:
-            raise TypeError(str(e) + ' (on accessing %s in %s)' % (repr(keys[:i+1]), repr(o)))
+            raise TypeError(str(e) + ' (on accessing %s in %s)' % (repr(keypath[:i+1]), repr(o)))
     return v
 
 

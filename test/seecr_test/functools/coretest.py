@@ -106,18 +106,22 @@ class CoreTest(TestCase):
     def testGet_in(self):
         # empty keypath: in->out
         self.assertEquals({}, get_in({}, []))
+        self.assertEquals({}, get_in({}, ()))
 
         # non-existing path
-        self.assertEquals(None, get_in({}, ['a']))
+        self.assertEquals(None, get_in({}, ('a')))
         self.assertEquals(None, get_in({}, ['a', 'b', 'c']))
+        self.assertEquals(None, get_in({}, ('a', 'b', 'c')))
 
         # existing path
         self.assertEquals('X', get_in({'a': 'X'}, ['a']))
         self.assertEquals({'b': 'bb'}, get_in({'a': {'b': 'bb'}}, ['a']))
         self.assertEquals('bb', get_in({'a': {'b': 'bb'}}, ['a', 'b']))
+        self.assertEquals('bb', get_in({'a': {'b': 'bb'}}, ('a', 'b'))) # tuple
 
         # tail does not exist
         self.assertEquals(None, get_in({'a': {'b': 'X'}}, ['a', 'y']))
+        self.assertEquals(None, get_in({'a': {'b': 'X'}}, ('a', 'y')))
         self.assertEquals(None, get_in({'a': {'b': {'c': 'X'}}}, ['a', 'b', 'y', 'z']))
 
         # other default
