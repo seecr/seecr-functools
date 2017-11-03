@@ -26,10 +26,9 @@
 from os import getuid
 assert getuid() != 0, "Do not run tests as 'root'"
 
-from os import system                            #DO_NOT_DISTRIBUTE
-system('find .. -name "*.pyc" | xargs rm -f')    #DO_NOT_DISTRIBUTE
-from seecrdeps import includeParentAndDeps       #DO_NOT_DISTRIBUTE
-includeParentAndDeps(__file__, scanForDeps=True) #DO_NOT_DISTRIBUTE
+from seecrdeps import includeParentAndDeps, cleanup     #DO_NOT_DISTRIBUTE
+includeParentAndDeps(__file__, scanForDeps=True)        #DO_NOT_DISTRIBUTE
+cleanup(__file__)                                       #DO_NOT_DISTRIBUTE
 
 import unittest
 from warnings import simplefilter
