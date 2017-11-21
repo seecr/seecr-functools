@@ -31,7 +31,7 @@ from unittest import TestCase
 from copy import deepcopy, copy
 from types import GeneratorType
 
-from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove, juxt, truthy, append, strng, trampoline, thrush, constantly, before, after, interpose, interleave, assoc_in, update_in, assoc, assoc_in_when, sequence, get_in, assoc_when
+from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove, juxt, truthy, append, strng, trampoline, thrush, constantly, before, after, interpose, interleave, assoc_in, update_in, assoc, assoc_in_when, sequence, get_in, assoc_when, update_in_when
 from seecr.functools.string import strip, split
 
 builtin_next = __builtin__.next
@@ -191,6 +191,21 @@ class CoreTest(TestCase):
         log = []
         self.assertEquals({'a': {'b': {'c': 'new'}}}, update_in({'a': {'b': {'c': 'old'}}}, ['a', 'b', 'c'], lambda o, *args: (log.append((o, args)) or 'new'), 2, 3, 4))
         self.assertEquals([('old', (2, 3, 4))], log)
+
+    def testUpdate_in_when(self):
+        # implementation uses get_in and assoc_in; so only testing conditional-intermediate dict creation and value-updating.
+
+        # basic-update-in works
+        self.assertEquals({'k': (None, 'new')}, update_in_when({}, ['k'], lambda old: (old, 'new')))
+        self.assertEquals({'k': ('old', 'new')}, update_in_when({'k': 'old'}, ['k'], lambda old: (old, 'new')))
+        self.assertEquals({'k': ('old', 'new')}, update_in_when({'k': 'old'}, ['k'], lambda old, m, a: self.assertEquals('more', m) or self.assertEquals('args', a) or (old, 'new'), 'more', 'args'))
+        self.assertEquals({'a': {'b': {'c': 'd'}}}, update_in_when({'a': {}}, ['a', 'b', 'c'], lambda old: 'd'))
+
+        # value not updated if condition / f-retval is None
+        self.assertEquals({'k': 'old'}, update_in_when({'k': 'old'}, ['k'], lambda old: None))
+
+        # intermediate-dicts not created if condition / f-retval is None
+        self.assertEquals({'a': {}}, update_in_when({'a': {}}, ['a', 'b', 'c'], lambda old: None))
 
     def testAssoc(self):
         self.assertEquals({'k': 'v'}, assoc({}, 'k', 'v'))

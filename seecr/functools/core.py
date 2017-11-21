@@ -356,6 +356,16 @@ def update_in(d, keypath, f, *args):
     target_d[leaf] = f(target_d.get(leaf), *args)
     return d
 
+def update_in_when(d, keypath, f, *args):
+    """
+    Same as update_in, but only updates the value at keypath (& create intermediate missing dicts) when the return value of f is not None.
+    """
+    v = get_in(d, keypath)
+    r = f(v, *args)
+    if r is None:
+        return d
+    return assoc_in(d, keypath, r)
+
 truthy = bool
 def falsy(o):
     return not o
