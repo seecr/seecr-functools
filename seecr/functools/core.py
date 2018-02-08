@@ -227,6 +227,11 @@ def interpose(sep):
         return _interpose_step
     return _interpose_xf
 
+def iterate(f, x):
+    while True:
+        yield x
+        x = f(x)
+
 def first(iterable, default=None):
     if iterable:
         for v in iterable:

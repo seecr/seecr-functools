@@ -31,7 +31,7 @@ from unittest import TestCase
 from copy import deepcopy, copy
 from types import GeneratorType
 
-from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove, juxt, truthy, append, strng, trampoline, thrush, constantly, before, after, interpose, interleave, assoc_in, update_in, assoc, assoc_in_when, sequence, get_in, assoc_when, update_in_when
+from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove, juxt, truthy, append, strng, trampoline, thrush, constantly, before, after, interpose, interleave, assoc_in, update_in, assoc, assoc_in_when, sequence, get_in, assoc_when, update_in_when, iterate
 from seecr.functools.string import strip, split
 
 builtin_next = __builtin__.next
@@ -843,6 +843,17 @@ class CoreTest(TestCase):
 
         # with transduce
         self.assertEquals(4, transduce(remove(lambda x: (x % 2) == 0), completing(lambda acc, e: acc + e), 0, [1, 2, 3, 4]))
+
+    def test_iterate(self):
+        i = iterate(lambda s: s+'x', '')
+        self.assertEquals('', next(i))
+        self.assertEquals('x', next(i))
+        self.assertEquals('xx', next(i))
+        self.assertEquals('xxx', next(i))
+
+        i = iterate(lambda n: n + 1, 3)
+        self.assertEquals(3, next(i))
+        self.assertEquals(4, next(i))
 
     def test_interleave(self):
         l = list
