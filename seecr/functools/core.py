@@ -2,7 +2,7 @@
 #
 # Seecr Functools a set of various functional tools
 #
-# Copyright (C) 2017 Seecr (Seek You Too B.V.) http://seecr.nl
+# Copyright (C) 2017-2018 Seecr (Seek You Too B.V.) http://seecr.nl
 #
 # This file is part of "Seecr Functools"
 #
@@ -644,3 +644,6 @@ def sequence(*a):
         return _()
     else:
         raise TypeError("sequence takes either 1 or 2 arguments ({} given)".format(len(a)))
+
+# In time expose more functions based on usage. TODO
+__all__ = ['get_in', 'update_in', 'assoc_in']

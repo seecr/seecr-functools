@@ -2,7 +2,7 @@
 #
 # Seecr Functools a set of various functional tools
 #
-# Copyright (C) 2017 Seecr (Seek You Too B.V.) http://seecr.nl
+# Copyright (C) 2017-2018 Seecr (Seek You Too B.V.) http://seecr.nl
 #
 # This file is part of "Seecr Functools"
 #
@@ -22,4 +22,4 @@
 #
 ## end license ##
 
-
+from .core import *
