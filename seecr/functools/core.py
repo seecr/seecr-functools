@@ -475,6 +475,19 @@ def some_thread(x, *fns):
 
     return x
 
+_pred_falsy = lambda obj: obj is False or obj is None
+def any_fn(*fns):
+    """
+    Takes a set of fns and returns a function that returns the first "predicate" logical true value (not None or False) returned by one of its composing functions against all aguments given.
+    """
+    def _any_fn(*a, **kw):
+        for fn in fns:
+            res = fn(*a, **kw)
+            if not _pred_falsy(res):
+                return res
+
+    return _any_fn
+
 def fpartial(f, *a, **kw):       # similar to: https://github.com/clojurewerkz/support/blob/master/src/clojure/clojurewerkz/support/fn.clj - but *only* first-arg is allowed & required.
     def _wrap(arg):
         return f(arg, *a, **kw)

@@ -31,7 +31,7 @@ from unittest import TestCase
 from copy import deepcopy, copy
 from types import GeneratorType
 
-from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove, juxt, truthy, append, strng, trampoline, thrush, constantly, before, after, interpose, interleave, assoc_in, update_in, assoc, assoc_in_when, sequence, get_in, assoc_when, update_in_when, iterate, last
+from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove, juxt, truthy, append, strng, trampoline, thrush, constantly, before, after, interpose, interleave, assoc_in, update_in, assoc, assoc_in_when, sequence, get_in, assoc_when, update_in_when, iterate, last, any_fn
 from seecr.functools.string import strip, split
 
 builtin_next = __builtin__.next
@@ -100,6 +100,26 @@ class CoreTest(TestCase):
         self.assertEquals(1, last([1], default='-'))
         self.assertEquals(2, last([1, 2], default='-'))
         self.assertEquals(3, last((x for x in [1, 2, 3]), default='-'))
+
+    def testAnyFn(self):
+        a = lambda: None
+        b = lambda: False
+        self.assertEqual(None, any_fn(a, b)())
+        self.assertEqual(None, any_fn()('what', kw='ever'))
+        self.assertEqual(None, any_fn()('what', 'ever'))
+        self.assertEqual(None, any_fn()())
+
+        log = []
+        a = lambda x, y: log.append((x, y)) or False
+        b = lambda x, y: log.append((x, y)) or True
+        self.assertEqual(True, any_fn(a, b, a, b)('x', y='y'))
+        self.assertEqual([('x', 'y'), ('x', 'y')], log)
+
+        a = lambda: 0
+        self.assertEqual(0, any_fn(a)())
+
+        a = lambda: []
+        self.assertEqual([], any_fn(a)())
 
     def testThrush(self):
         self.assertRaises(TypeError, lambda: thrush())
