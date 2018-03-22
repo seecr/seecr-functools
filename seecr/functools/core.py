@@ -238,11 +238,21 @@ def first(iterable, default=None):
             return v
     return default
 
-def second(iterable):
+def second(iterable, default=None):
     if iterable:
         iterable = iter(iterable)
         next(iterable, None)
-        return next(iterable, None)
+        return next(iterable, default)
+
+    return default
+
+def last(iterable, default=None):
+    l = default
+    if iterable:
+        for l in iterable:
+            pass
+
+    return l
 
 # TODO: nth, before, after, assoc / assoc_in, get / get_in
 

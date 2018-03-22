@@ -31,7 +31,7 @@ from unittest import TestCase
 from copy import deepcopy, copy
 from types import GeneratorType
 
-from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove, juxt, truthy, append, strng, trampoline, thrush, constantly, before, after, interpose, interleave, assoc_in, update_in, assoc, assoc_in_when, sequence, get_in, assoc_when, update_in_when, iterate
+from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove, juxt, truthy, append, strng, trampoline, thrush, constantly, before, after, interpose, interleave, assoc_in, update_in, assoc, assoc_in_when, sequence, get_in, assoc_when, update_in_when, iterate, last
 from seecr.functools.string import strip, split
 
 builtin_next = __builtin__.next
@@ -75,13 +75,31 @@ class CoreTest(TestCase):
         self.assertEquals('-', first([], default='-'))
         self.assertEquals('-', first((x for x in []), default='-'))
 
-
     def testSecond(self):
         self.assertEquals(None, second(None))
         self.assertEquals(None, second([]))
         self.assertEquals(None, second([1]))
         self.assertEquals(2, second([1, 2]))
         self.assertEquals(2, second([1, 2, 3]))
+
+        self.assertEquals('-', second(None, default='-'))
+        self.assertEquals('x', second([], default='x'))
+        self.assertEquals('-', second([1], default='-'))
+        self.assertEquals(2, second([1, 2], default='-'))
+        self.assertEquals(2, second([1, 2, 3], default='-'))
+
+    def testLast(self):
+        self.assertEquals(None, last(None))
+        self.assertEquals(None, last([]))
+        self.assertEquals(1, last([1]))
+        self.assertEquals(2, last([1, 2]))
+        self.assertEquals(3, last(x for x in [1, 2, 3]))
+
+        self.assertEquals('-', last(None, default='-'))
+        self.assertEquals('x', last([], default='x'))
+        self.assertEquals(1, last([1], default='-'))
+        self.assertEquals(2, last([1, 2], default='-'))
+        self.assertEquals(3, last((x for x in [1, 2, 3]), default='-'))
 
     def testThrush(self):
         self.assertRaises(TypeError, lambda: thrush())
