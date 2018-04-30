@@ -536,6 +536,52 @@ def take(*a):
     else:
     	raise TypeError("take takes either 1 or 2 arguments ({} given)".format(len(a)))
 
+def drop(*a):
+    """
+    drop(n)
+    drop(n, coll)
+
+    Returns an iterable of all but the first n items in coll.
+    Returns a stateful transducer when no collection is provided.
+    """
+    if len(a) == 1:
+        n, = a
+        del a
+        def _drop_xf(rf):
+            _nv = [n]
+            def _drop_step(*a):
+                if len(a) == 0:
+                    return rf()
+                elif len(a) == 1:
+                    result, = a
+                    return rf(result)
+                elif len(a) == 2:
+                    result, input_ = a
+                    _n = _nv[0]
+                    _nv[0] = _nn = _n - 1
+                    if _n > 0:
+                        return result
+                    else:
+                        return rf(result, input_)
+            return _drop_step
+        return _drop_xf
+    elif len(a) == 2:
+        n, coll = a[0], iter(a[1])
+        del a
+        def _drop():
+            if n < 1:
+                return coll
+            try:
+                for _ in xrange(n):
+                    next(coll)
+            except StopIteration:
+                pass
+
+            return coll
+        return _drop()
+    else:
+    	raise TypeError("drop takes either 1 or 2 arguments ({} given)".format(len(a)))
+
 def comp(*fns):
     """
     Takes a set of functions and returns a fn that is the composition of those fns.  The returned fn takes a variable number of args, applies the rightmost of fns to the args, the next fn (right-to-left) to the result, etc.

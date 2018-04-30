@@ -31,7 +31,7 @@ from unittest import TestCase
 from copy import deepcopy, copy
 from types import GeneratorType
 
-from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove, juxt, truthy, append, strng, trampoline, thrush, constantly, before, after, interpose, interleave, assoc_in, update_in, assoc, assoc_in_when, sequence, get_in, assoc_when, update_in_when, iterate, last, any_fn
+from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove, juxt, truthy, append, strng, trampoline, thrush, constantly, before, after, interpose, interleave, assoc_in, update_in, assoc, assoc_in_when, sequence, get_in, assoc_when, update_in_when, iterate, last, any_fn, drop
 from seecr.functools.string import strip, split
 
 builtin_next = __builtin__.next
@@ -1092,6 +1092,125 @@ class CoreTest(TestCase):
             return acc
         self.assertEquals([1, 2], transduce(take(2), completing(_a), [], [1, 2, 3, 4, 5]))
 
+    def test_drop(self):
+        l = list
+        _called = []
+        def log(r, i):
+            append(_called, (r, i))
+        def called():
+            c = _called[:]
+            del _called[:]
+            return c
+
+        # 2-arity - 0
+        self.assertEquals([], l(drop(0, [])))
+        self.assertEquals([1], l(drop(0, [1])))
+        self.assertEquals([1, 2], l(drop(0, [1, 2])))
+        # 2-arity - 1
+        self.assertEquals([], l(drop(1, [])))
+        self.assertEquals([], l(drop(1, [1])))
+        self.assertEquals([2], l(drop(1, [1, 2])))
+        self.assertEquals([2, 3], l(drop(1, [1, 2, 3])))
+        # 2-arity - n
+        self.assertEquals([], l(drop(3, [1, 2])))
+        self.assertEquals([], l(drop(3, [1, 2, 3])))
+        self.assertEquals([4], l(drop(3, [1, 2, 3, 4])))
+        self.assertEquals([4, 5], l(drop(3, [1, 2, 3, 4, 5])))
+        self.assertEquals([4, 5, 6], l(drop(3, [1, 2, 3, 4, 5, 6])))
+
+        # drop is eager for dropping, lazy for the remainder (in fn / coll form)
+        s = drop(3, log_iter(_called, [1, 2, 3, 4, 5, 6]))
+        res = first(s)
+        self.assertEquals(4, res)
+        self.assertEquals([1, 2, 3, 4], called())
+
+        # {0, 1, too-many}-arity (transducer)
+        self.assertRaises(TypeError, lambda: drop()) # n required.
+        assert_tx_default_0_1_arities(drop(3))
+        assert_tx_default_bad_arity(drop(3))
+
+        # 2-arity - initial
+        # drop(0)
+        drp = drop(0)
+        rf = before(lambda r, i: 'res', log)
+        xf = drp(rf)             # stateful xf from here!
+        # 1st val (in == out)
+        self.assertEquals('res', xf('in', 1))
+        self.assertEquals([('in', 1)], called())
+        # 2nd val (in == out)
+        self.assertEquals('res', xf('in', 2))
+        self.assertEquals([('in', 2)], called())
+
+        # drop(1)
+        drp = drop(1)
+        rf = before(lambda r, i: 'res', log)
+        xf = drp(rf)             # stateful xf from here!
+        # 1st val (in -> gone)
+        self.assertEquals('in', xf('in', 1))
+        self.assertEquals([], called())
+        # 2nd val (in == out)
+        self.assertEquals('res', xf('in', 2))
+        self.assertEquals([('in', 2)], called())
+
+        # drop(3)
+        drp = drop(3)
+        rf = before(lambda r, i: 'res', log)
+        xf = drp(rf)             # stateful xf from here!
+        # 1st..3rd val (in -> gone)
+        self.assertEquals('in', xf('in', 1))
+        self.assertEquals('in', xf('in', 2))
+        self.assertEquals('in', xf('in', 3))
+        self.assertEquals([], called())
+        # 4th val (in == out)
+        self.assertEquals('res', xf('in', 4))
+        self.assertEquals([('in', 4)], called())
+
+        # reduced handled ok
+        drp = drop(1)
+        rf = before(lambda r, i: reduced('rres'), log)
+        xf = drp(rf)
+        # 1st val (in -> gone)
+        self.assertEquals('in', xf('in', 1))
+        self.assertEquals([], called())
+        # 2nd val (in -> pass-through, reduced unharmed)
+        ret = xf('in', 2)
+        self.assertTrue(is_reduced(ret))
+        self.assertEquals('rres', unreduced(ret))
+        self.assertEquals([('in', 2)], called())
+
+        # with sequence
+        f = lambda n, coll: list(sequence(drop(n), log_iter(_called, coll)))
+
+        # drop 0
+        self.assertEquals([], f(0, []))
+        self.assertEquals(['coll-done'], called())
+        self.assertEquals([1], f(0, [1]))
+        self.assertEquals([1, 'coll-done'], called())
+
+        # drop 1
+        self.assertEquals([], f(1, []))
+        self.assertEquals(['coll-done'], called())
+        self.assertEquals([], f(1, [1]))
+        self.assertEquals([1, 'coll-done'], called())
+        self.assertEquals([2], f(1, [1, 2]))
+        self.assertEquals([1, 2, 'coll-done'], called())
+
+        # drop 3
+        self.assertEquals([], f(3, [1, 2]))
+        self.assertEquals([1, 2, 'coll-done'], called())
+        self.assertEquals([], f(3, [1, 2, 3]))
+        self.assertEquals([1, 2, 3, 'coll-done'], called())
+        self.assertEquals([4], f(3, [1, 2, 3, 4]))
+        self.assertEquals([1, 2, 3, 4, 'coll-done'], called())
+        self.assertEquals([4, 5], f(3, [1, 2, 3, 4, 5]))
+        self.assertEquals([1, 2, 3, 4, 5, 'coll-done'], called())
+
+        # drop is eager for dropping, lazy for the remainder (in transducer form)
+        s = sequence(drop(3), log_iter(_called, [1, 2, 3, 4, 5, 6]))
+        res = first(s)
+        self.assertEquals(4, res)
+        self.assertEquals([1, 2, 3, 4], called())
+
     def test_interpose(self):
         self.assertRaises(TypeError, lambda: interpose()) # sep(arator) required.
         assert_tx_default_0_1_arities(interpose('-'))
@@ -1159,21 +1278,6 @@ class CoreTest(TestCase):
             del _log[:]
             return l
 
-        class log_iter(object):
-            def __init__(self, in_):
-                self._iterrable = iter(in_)
-            def __iter__(self):
-                return self
-            def next(self):
-                try:
-                    v = self._iterrable.next()
-                except StopIteration:
-                    append(_log, 'coll-done')
-                    raise
-                else:
-                    append(_log, v)
-                    return v
-
         def assert_sqnc(expected_res_log, *sequence_args):
             def rf(acc, res_log):
                 seq_rest = acc
@@ -1187,9 +1291,9 @@ class CoreTest(TestCase):
                 self.fail('expected_res_log must have >= 1 enties.  End-of-sequence is signaled by "s-done" for sequence-output and "coll-done" for a consumed seq / iterable.')
 
             if len(sequence_args) == 1:
-                init = sequence(log_iter(sequence_args[0]))
+                init = sequence(log_iter(_log, sequence_args[0]))
             elif len(sequence_args) == 2:
-                init = sequence(sequence_args[0], log_iter(sequence_args[1]))
+                init = sequence(sequence_args[0], log_iter(_log, sequence_args[1]))
             else:
                 self.fail('Unexpected sequence_args')
 
@@ -1278,10 +1382,6 @@ class CoreTest(TestCase):
         assert_sqnc([(1, [1]), (2, [2]), ('parrr', []), ('ty!', []), ('s-done', [])], comp(take(2), party), g_n_fn())
 
 
-def dumbEqual(expected, result, msg=None):
-    if expected != result:
-        raise AssertionError('{} != {}{}'.format(expected, result, '\nMessage: {}'.format(msg) if msg else ''))
-
 def assert_tx_default_0_1_arities(transducer):
     # 0-arity
     called = []
@@ -1302,5 +1402,26 @@ def assert_tx_default_bad_arity(transducer):
         return
     raise AssertionError('Expected "TypeError" to be raised (for bad number of arguments).')
 
+class log_iter(object):
+    def __init__(self, log, in_):
+        self._log = log
+        self._iterrable = iter(in_)
+    def __iter__(self):
+        return self
+    def next(self):
+        try:
+            v = self._iterrable.next()
+        except StopIteration:
+            append(self._log, 'coll-done')
+            raise
+        else:
+            append(self._log, v)
+            return v
+
+
 def raiser(*a, **k):
     raise AssertionError('Should never be called!')
+
+def dumbEqual(expected, result, msg=None):
+    if expected != result:
+        raise AssertionError('{} != {}{}'.format(expected, result, '\nMessage: {}'.format(msg) if msg else ''))
