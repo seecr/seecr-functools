@@ -256,6 +256,19 @@ def last(iterable, default=None):
 
 # TODO: nth, before, after, assoc / assoc_in, get / get_in
 
+def get(o, key, default=None):
+    """
+    Returns the value in an associative structure (that implement __getitem__),
+    where key is a key or index. Returns None if the key is not present,
+    or the default value if supplied.
+    """
+    if o is None:
+        return default
+    try:
+        return o[key]
+    except (IndexError, KeyError):
+        return default
+
 def get_in(o, keypath, default=None):
     """
     Returns the value in a nested associative structure (that implement __getitem__),

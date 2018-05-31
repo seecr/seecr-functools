@@ -31,7 +31,7 @@ from unittest import TestCase
 from copy import deepcopy, copy
 from types import GeneratorType
 
-from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove, juxt, truthy, append, strng, trampoline, thrush, constantly, before, after, interpose, interleave, assoc_in, update_in, assoc, assoc_in_when, sequence, get_in, assoc_when, update_in_when, iterate, last, any_fn, drop
+from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove, juxt, truthy, append, strng, trampoline, thrush, constantly, before, after, interpose, interleave, assoc_in, update_in, assoc, assoc_in_when, sequence, get_in, assoc_when, update_in_when, iterate, last, any_fn, drop, get
 from seecr.functools.string import strip, split
 
 builtin_next = __builtin__.next
@@ -140,6 +140,34 @@ class CoreTest(TestCase):
 
         f = constantly([{'zz'}])
         self.assertEquals([{'zz'}], f())
+
+    def test_get(self):
+        # None as empty associative collection (indexable or a mapping)
+        self.assertEquals(None, get(None, 'a-key'))
+        self.assertEquals(None, get(None, 0))
+        self.assertEquals(42, get(None, 'a-key', 42))
+        self.assertEquals(42, get(None, 0, 42))
+
+        # values
+        self.assertEquals('v', get({'k': 'v'}, 'k'))
+        self.assertEquals('v', get({'k': 'v', 'a': 'b'}, 'k'))
+        self.assertEquals('v', get({'k': 'v'}, 'k', 42))
+        self.assertEquals('one', get(['one'], 0))
+        self.assertEquals('one', get(['one'], 0, 42))
+        self.assertEquals(2, get([1, 2, 3], 1))
+
+        # Default when not found - explicit None
+        self.assertEquals(None, get([], 0, None))
+        self.assertEquals(None, get([0, 1, 2], 3, None))
+        self.assertEquals(None, get({'a': 'b'}, 'k', None))
+        self.assertEquals(None, get(o={}, key=0, default=None))
+        # Default when not found - some other value
+        self.assertEquals(42, get({}, 'a-key', 42))
+        self.assertEquals(42, get(o={}, key='a-key', default=42))
+
+        # Does not mask TypeError when trying non-numbers when trying to retrieve by index
+        self.assertRaises(TypeError, lambda: get([], 'a-key'))
+        self.assertRaises(TypeError, lambda: get([], 'a-key', 42))
 
     def testGet_in(self):
         # empty keypath: in->out
