@@ -256,8 +256,8 @@ def get_in(o, keypath, default=None):
         return default
     v = o
     for i, key in enumerate(keypath):
-        if v is None:
-            return default
+        if v is None:           # FIXME: gedrag testen!
+            return default      #
         try:
             v = v[key]
         except (IndexError, KeyError):
@@ -315,17 +315,6 @@ def strng(*a):
     else:
         return reduce(_strng_rf, a)
 
-def _set_or_update_target_d(d, keypath):
-    path, leaf = keypath[:-1], keypath[-1]
-    target_d = d
-    if path:
-        for i, p in enumerate(path):
-            target_d = target_d.setdefault(p, {})
-            if not isinstance(target_d, dict):
-                raise ValueError('At path {} value {} is not a dict.'.format(path[:i+1], repr(target_d)))
-
-    return target_d, leaf
-
 def assoc(d, k, v, *kvs):
     if (len(kvs) % 2) != 0:
         raise TypeError('Uneven number of kvs')
@@ -343,6 +332,25 @@ def assoc_when(d, k, v):
     if v is not None:
         return assoc(d, k, v)
     return d
+
+def _set_or_update_target_d(d, keypath): # TODO: remove when obsolete
+    path, leaf = keypath[:-1], keypath[-1]
+    target_d = d
+    if path:
+        for i, p in enumerate(path):
+            target_d = target_d.setdefault(p, {})
+            if not isinstance(target_d, dict):
+                raise ValueError('At path {} value {} is not a dict.'.format(path[:i+1], repr(target_d)))
+
+    return target_d, leaf
+
+def _set_path_with_oldvalue(o, keypath): # FIXME: finish and use in assoc_in / update_in
+    if not keypath:
+        raise ValueError('keypath must not be empty')
+
+    set_val = lambda: None
+    old_v = None
+    return set_val, old_v
 
 def assoc_in(d, keypath, v):
     target_d, leaf = _set_or_update_target_d(d, keypath)

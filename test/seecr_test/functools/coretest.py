@@ -34,6 +34,9 @@ from types import GeneratorType
 from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove, juxt, truthy, append, strng, trampoline, thrush, constantly, before, after, interpose, interleave, assoc_in, update_in, assoc, assoc_in_when, sequence, get_in, assoc_when, update_in_when, iterate
 from seecr.functools.string import strip, split
 
+# helpers
+from seecr.functools.core import _set_path_with_oldvalue
+
 builtin_next = __builtin__.next
 l = list
 
@@ -283,6 +286,33 @@ class CoreTest(TestCase):
                           'y': 'yy'},
                     'x': 'xx',
                 }, ['a', 'b'], 'NEW'))
+
+    def testAssoc_in_indexable_coll(self):
+        self.assertEquals([1], assoc_in(['a'], (0,), 1))
+        self.assertEquals([['b']], assoc_in([['a']], (0, 0), 'b'))
+        self.assertEquals([0, ['a', 'x', 'b']], assoc_in([0, ['a', 'b', 'c']], (0, 0), 'x'))
+        self.assertEquals([0, ['a', ['x'], 'b']], assoc_in([0, ['a', 'b', 'c']], (0, 0), ['x']))
+        self.assertEquals([0, ['a', ['x'], 'b']], assoc_in([0, ['a', 'b', 'c']], (0, 0), ))
+
+        # TODO
+        self.fail()
+
+    def test_helper__set_path_with_oldvalue(self):
+        # Helper for assoc_in / update_in
+
+        # empty keypath is meaningless
+        self.assertRaises(ValueError, lambda: _set_path_with_oldvalue({}, []))
+        self.assertRaises(ValueError, lambda: _set_path_with_oldvalue(o=[], keypath=[]))
+
+        # X
+        orig_d = {'a': {'b': 0}}
+        d = deepcopy(orig_d)
+        set_val, old_v = _set_path_with_oldvalue(d, ('a', 'b'))
+        self.assertEqual(orig_d, d)
+        self.assertEqual(0, old_v)
+        set_val(1)
+        self.assertNotEqual(orig_d, d)
+        self.assertEqual(1, get_in(d, ('a', 'b')))
 
     def testAssoc_in_pathAcrossNonDicts(self):
         try:
@@ -782,7 +812,6 @@ class CoreTest(TestCase):
     def test_map_1coll(self):
         # TODO: test lazyness when implemented (using lazy_seq)!
         plus = lambda x: x + 1
-        l = list
 
         # empty coll - fn not called
         self.assertEquals([], l(map(raiser, [])))
@@ -797,7 +826,6 @@ class CoreTest(TestCase):
     def test_map_Ncoll(self):
         # TODO: test lazyness when implemented (using lazy_seq)!
         plus = lambda _1, *a: plus(_1 + first(a), *a[1:]) if a else _1
-        l = list
 
         # empty coll - fn not called
         self.assertEquals([], l(map(raiser, [], [], [])))
@@ -856,8 +884,6 @@ class CoreTest(TestCase):
         self.assertEquals(4, next(i))
 
     def test_interleave(self):
-        l = list
-
         # empty
         self.assertEquals([], l(interleave()))
         self.assertEquals([], l(interleave([])))
@@ -983,8 +1009,6 @@ class CoreTest(TestCase):
         self.assertEquals([1, 2, 3, 4, 5, 6], transduce(cat, completing(_a), [], [[1, 2], [3, 4, 5], [], [6]]))
 
     def test_take(self):
-        l = list
-
         # 2-arity
         self.assertEquals([], l(take(15, [])))
         self.assertEquals([], l(take(0, [1, 2])))
