@@ -31,7 +31,7 @@ from unittest import TestCase
 from copy import deepcopy, copy
 from types import GeneratorType
 
-from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove, juxt, truthy, append, strng, trampoline, thrush, constantly, before, after, interpose, interleave, assoc_in, update_in, assoc, assoc_in_when, sequence, get_in, assoc_when, update_in_when, iterate, last, any_fn, drop, get
+from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove, juxt, truthy, append, strng, trampoline, thrush, constantly, before, after, interpose, interleave, assoc_in, update_in, assoc, assoc_in_when, sequence, get_in, assoc_when, update_in_when, iterate, last, any_fn, drop, get, merge, merge_with
 from seecr.functools.string import strip, split
 
 builtin_next = __builtin__.next
@@ -272,6 +272,54 @@ class CoreTest(TestCase):
 
         # intermediate-dicts not created if condition / f-retval is None
         self.assertEquals({'a': {}}, update_in_when({'a': {}}, ['a', 'b', 'c'], lambda old: None))
+
+    def test_merge(self):
+        # empty
+        self.assertEqual({}, merge())
+        self.assertEqual({}, merge({}))
+        self.assertEqual({}, merge({}, {}))
+
+        # one
+        self.assertEqual({'a': 1}, merge({'a': 1}))
+        self.assertEqual({'a': 1}, merge({'a': 1}, {}))
+        self.assertEqual({'a': 1, 'b': 2}, merge({}, {'a': 1, 'b': 2}))
+
+        # more
+        self.assertEqual({'a': 1, 'b': 2}, merge({'a': 1}, {'b': 2}))
+        self.assertEqual({'a': 1, 'b': 2, 'c': 3}, merge({'a': 1}, {'b': 2}, {'c': 3}))
+
+        # last-dict-wins & input not mut(il)ated
+        args = ({'a': 1}, {'b': 2}, {'c': 3, 'a': 9})
+        self.assertEqual({'a': 9, 'b': 2, 'c': 3}, merge(*args))
+        self.assertEqual(({'a': 1}, {'b': 2}, {'c': 3, 'a': 9}), args)
+
+    def test_merge_with(self):
+        def not_called(*a):
+            self.fail('should not happen')
+
+        # empty
+        self.assertEqual({}, merge_with(not_called, ))
+        self.assertEqual({}, merge_with(not_called, {}))
+        self.assertEqual({}, merge_with(not_called, {}, {}))
+
+        # one
+        self.assertEqual({'a': 1}, merge_with(not_called, {'a': 1}))
+        self.assertEqual({'a': 1}, merge_with(not_called, {'a': 1}, {}))
+        self.assertEqual({'a': 1, 'b': 2}, merge_with(not_called, {}, {'a': 1, 'b': 2}))
+
+        # more
+        self.assertEqual({'a': 1, 'b': 2}, merge_with(not_called, {'a': 1}, {'b': 2}))
+        self.assertEqual({'a': 1, 'b': 2, 'c': 3}, merge_with(not_called, {'a': 1}, {'b': 2}, {'c': 3}))
+
+        # last-dict-wins & input not mut(il)ated
+        args = ({'a': 1}, {'b': 2}, {'c': 3, 'a': 9})
+        called = []
+        def f(old, new):
+            called.append((old, new))
+            return 666
+        self.assertEqual({'a': 666, 'b': 2, 'c': 3}, merge_with(f, *args))
+        self.assertEqual(({'a': 1}, {'b': 2}, {'c': 3, 'a': 9}), args)
+        self.assertEqual([(1, 9)], called)
 
     def testAssoc(self):
         self.assertEquals({'k': 'v'}, assoc({}, 'k', 'v'))

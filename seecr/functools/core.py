@@ -394,6 +394,28 @@ def update_in_when(d, keypath, f, *args):
         return d
     return assoc_in(d, keypath, r)
 
+def merge(*ds):
+    """
+    merge dictionaries left-to-right.
+    """
+    n = {}
+    for d in ds:
+        n.update(d)
+    return n
+
+def merge_with(f, *ds):
+    """
+    Merge dictionaries left-to-right, calling f with old and new value if the key already exists.
+    """
+    n = {}
+    for d in ds:
+        for k, v in d.items():
+            if k in n:
+                n[k] = f(n[k], v)
+            else:
+                n[k] = v
+    return n
+
 truthy = bool
 def falsy(o):
     return not o
