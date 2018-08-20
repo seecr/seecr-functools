@@ -409,7 +409,7 @@ def merge_with(f, *ds):
     """
     n = {}
     for d in ds:
-        for k, v in d.items():
+        for k, v in d.iteritems():
             if k in n:
                 n[k] = f(n[k], v)
             else:
