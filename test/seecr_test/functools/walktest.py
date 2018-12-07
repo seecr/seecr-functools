@@ -27,7 +27,8 @@ from __future__ import absolute_import
 from unittest import TestCase
 from seecr.test.io import stdout_replaced
 
-from copy import deepcopy, copy
+from collections import Mapping
+from copy import deepcopy
 
 from seecr.functools.core import identity
 from seecr.functools.walk import walk, prewalk, postwalk, prewalk_demo, postwalk_demo
@@ -178,3 +179,15 @@ Walked: {'k': 'v'}
 Walked: ('k', 'v')
 Walked: k
 Walked: v\n''', res)
+
+    def test_walk_supports_Mapping(self):
+        class MyMapping(Mapping):
+            def __getitem__(self, key):
+                return 'aValue'
+            def __iter__(self):
+                yield 'aKey'
+            def __len__(self):
+                return 1
+        m = MyMapping()
+        res = walk(inner=lambda (k, v): (k, '~' + v), outer=identity, coll=m)
+        self.assertEquals({'aKey': '~aValue'}, res)

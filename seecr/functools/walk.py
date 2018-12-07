@@ -23,6 +23,7 @@
 ## end license ##
 
 from functools import partial
+from collections import Mapping
 
 from seecr.functools.core import identity
 
@@ -31,7 +32,7 @@ from seecr.functools.core import identity
 def walk(inner, outer, coll):
     if isinstance(coll, list):
         return outer([inner(e) for e in coll])
-    elif isinstance(coll, dict):
+    elif isinstance(coll, Mapping):
         return outer(dict([inner(e) for e in coll.iteritems()]))
     elif isinstance(coll, tuple):
         return outer(tuple(inner(e) for e in coll))
