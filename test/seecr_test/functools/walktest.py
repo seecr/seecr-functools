@@ -22,7 +22,7 @@
 #
 ## end license ##
 
-from __future__ import absolute_import
+
 
 from unittest import TestCase
 from seecr.test.io import stdout_replaced
@@ -46,14 +46,14 @@ class WalkTest(TestCase):
                 set([7, 8, 9])]:
             res = walk(identity, identity, deepcopy(coll))
             res2 = walk(inner=identity, outer=identity, coll=deepcopy(coll))
-            self.assertEquals(type(res), type(coll))
-            self.assertEquals(res, coll)
-            self.assertEquals(res2, coll)
+            self.assertEqual(type(res), type(coll))
+            self.assertEqual(res, coll)
+            self.assertEqual(res2, coll)
 
     def test_walk_builds_new_coll(self):
         coll = [1, 2]
         res = walk(identity, identity, coll)
-        self.assertEquals([1, 2], res)
+        self.assertEqual([1, 2], res)
         self.assertFalse(res is coll)
 
     def test_walk_fns_outer(self):
@@ -62,8 +62,8 @@ class WalkTest(TestCase):
             log_outer.append(e)
             return "replaced"
 
-        self.assertEquals("replaced", walk(identity, outer, [1, 2]))
-        self.assertEquals([[1, 2]], log_outer)
+        self.assertEqual("replaced", walk(identity, outer, [1, 2]))
+        self.assertEqual([[1, 2]], log_outer)
 
     def test_walk_fns_inner(self):
         log_inner = []
@@ -71,8 +71,8 @@ class WalkTest(TestCase):
             log_inner.append(e)
             return e + 10
 
-        self.assertEquals([11, 12], walk(inner, identity, [1, 2]))
-        self.assertEquals([1, 2], log_inner)
+        self.assertEqual([11, 12], walk(inner, identity, [1, 2]))
+        self.assertEqual([1, 2], log_inner)
 
     def test_walk_outer_after_inner(self):
         log = []
@@ -83,8 +83,8 @@ class WalkTest(TestCase):
             log.append(("out", e))
             return set(e)
 
-        self.assertEquals({11, 12}, walk(inner, outer, [1, 2]))
-        self.assertEquals([("in", 1), ("in", 2), ("out", [11, 12])], log)
+        self.assertEqual({11, 12}, walk(inner, outer, [1, 2]))
+        self.assertEqual([("in", 1), ("in", 2), ("out", [11, 12])], log)
 
     def test_prewalk_visit_order(self):
         log = []
@@ -93,8 +93,8 @@ class WalkTest(TestCase):
             return e
         coll = [1, [22, 33], {"k": {"kk": ("v", "v2")}}, {"a",}]
         res = prewalk(f, deepcopy(coll))
-        self.assertEquals(coll, res)
-        self.assertEquals(
+        self.assertEqual(coll, res)
+        self.assertEqual(
             [
                 [1, [22, 33], {'k': {'kk': ('v', 'v2')}}, set(['a'])],
                 1,
@@ -122,8 +122,8 @@ class WalkTest(TestCase):
             return e
         coll = [1, [22, 33], {"k": {"kk": ("v", "v2")}}, {"a",}]
         res = postwalk(f, deepcopy(coll))
-        self.assertEquals(coll, res)
-        self.assertEquals(
+        self.assertEqual(coll, res)
+        self.assertEqual(
             [
                 1,
                 22,
@@ -149,13 +149,13 @@ class WalkTest(TestCase):
             if isinstance(e, dict):
                 return {}
             return e
-        self.assertEquals([1, {}], postwalk(f, [1, {"k": "v"}]))
+        self.assertEqual([1, {}], postwalk(f, [1, {"k": "v"}]))
 
         with stdout_replaced() as out:
             postwalk_demo([1, {"k": "v"}])
             res = out.getvalue()
 
-        self.assertEquals('''Walked: 1
+        self.assertEqual('''Walked: 1
 Walked: k
 Walked: v
 Walked: ('k', 'v')
@@ -167,13 +167,13 @@ Walked: [1, {'k': 'v'}]\n''', res)
             if isinstance(e, dict):
                 return {}
             return e
-        self.assertEquals([1, {}], prewalk(f, [1, {"k": "v"}]))
+        self.assertEqual([1, {}], prewalk(f, [1, {"k": "v"}]))
 
         with stdout_replaced() as out:
             prewalk_demo([1, {"k": "v"}])
             res = out.getvalue()
 
-        self.assertEquals('''Walked: [1, {'k': 'v'}]
+        self.assertEqual('''Walked: [1, {'k': 'v'}]
 Walked: 1
 Walked: {'k': 'v'}
 Walked: ('k', 'v')
@@ -189,5 +189,5 @@ Walked: v\n''', res)
             def __len__(self):
                 return 1
         m = MyMapping()
-        res = walk(inner=lambda (k, v): (k, '~' + v), outer=identity, coll=m)
-        self.assertEquals({'aKey': '~aValue'}, res)
+        res = walk(inner=lambda k_v: (k_v[0], '~' + k_v[1]), outer=identity, coll=m)
+        self.assertEqual({'aKey': '~aValue'}, res)

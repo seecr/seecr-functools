@@ -42,59 +42,59 @@ class WrangleTest(TestCase):
             return "should see this"
 
         # Last clause if uneven is non-conditionally executed if reached.
-        self.assertEquals("a", fix(" a   ", lambda x: None, lambda x:None, strip))
-        self.assertEquals(42, fix(" a   ", lambda x: True, lambda x: 42, strip))
-        self.assertEquals("should see this", fix("a", sole_function))
+        self.assertEqual("a", fix(" a   ", lambda x: None, lambda x:None, strip))
+        self.assertEqual(42, fix(" a   ", lambda x: True, lambda x: 42, strip))
+        self.assertEqual("should see this", fix("a", sole_function))
 
         # Any value can be `fixed'
-        self.assertEquals(None, fix(None))
-        self.assertEquals('zz', fix('zz'))
-        self.assertEquals({'a': ['x']}, fix({'a': ['x']}))
-        self.assertEquals(x, fix(x))
+        self.assertEqual(None, fix(None))
+        self.assertEqual('zz', fix('zz'))
+        self.assertEqual({'a': ['x']}, fix({'a': ['x']}))
+        self.assertEqual(x, fix(x))
 
         # Default input == output
         self.assertTrue(x is fix(x))
 
         # No clauses
-        self.assertEquals(x, fix(x))
+        self.assertEqual(x, fix(x))
 
         # Single (Truthy - test) clause
-        self.assertEquals(42, fix(x, True, 42))
-        self.assertEquals(42, fix(x, object(), 42))
-        self.assertEquals(42, fix(x, ['x'], 42))
-        self.assertEquals((42, x), fix(x, lambda a: True, lambda a: (42, a)))
-        self.assertEquals((42, x), fix(x, lambda a: object(), lambda a: (42, a)))
-        self.assertEquals(x, fix(x, lambda a: a == x, lambda a: a))
+        self.assertEqual(42, fix(x, True, 42))
+        self.assertEqual(42, fix(x, object(), 42))
+        self.assertEqual(42, fix(x, ['x'], 42))
+        self.assertEqual((42, x), fix(x, lambda a: True, lambda a: (42, a)))
+        self.assertEqual((42, x), fix(x, lambda a: object(), lambda a: (42, a)))
+        self.assertEqual(x, fix(x, lambda a: a == x, lambda a: a))
 
         # Single (Falsy - test) clause
-        self.assertEquals(x, fix(x, None, 42))
-        self.assertEquals(x, fix(x, lambda n: None, lambda: 42))
-        self.assertEquals(x, fix(x, False, 42))
-        self.assertEquals(x, fix(x, lambda n: False, lambda: 42))
-        self.assertEquals('x', fix('x', '', 42))
-        self.assertEquals('x', fix('x', lambda n: '', lambda: 42))
-        self.assertEquals('x', fix('x', '', lambda n: not_this_one()))
-        self.assertEquals('x', fix('x', lambda n: '', lambda n: not_this_one()))
+        self.assertEqual(x, fix(x, None, 42))
+        self.assertEqual(x, fix(x, lambda n: None, lambda: 42))
+        self.assertEqual(x, fix(x, False, 42))
+        self.assertEqual(x, fix(x, lambda n: False, lambda: 42))
+        self.assertEqual('x', fix('x', '', 42))
+        self.assertEqual('x', fix('x', lambda n: '', lambda: 42))
+        self.assertEqual('x', fix('x', '', lambda n: not_this_one()))
+        self.assertEqual('x', fix('x', lambda n: '', lambda n: not_this_one()))
 
         # 2 clauses (first true -> 2nd not evaluated)
-        self.assertEquals(False, fix(x,
+        self.assertEqual(False, fix(x,
                                      True, False,
                                      True, not_this_one))
-        self.assertEquals(False, fix(x,
+        self.assertEqual(False, fix(x,
                                      lambda a: True, lambda a: False,
                                      lambda a: True, not_this_one))
-        self.assertEquals(False, fix(x,
+        self.assertEqual(False, fix(x,
                                      True, False,
                                      None, not_this_one))
 
         # 2 clauses (both false -> input returned)
-        self.assertEquals(x, fix(x,
+        self.assertEqual(x, fix(x,
                                  False, False,
                                  '', not_this_one))
-        self.assertEquals(x, fix(x,
+        self.assertEqual(x, fix(x,
                                  lambda a: '', lambda a: not_this_one,
                                  lambda a: 0, None))
-        self.assertEquals(x, fix(x,
+        self.assertEqual(x, fix(x,
                                  None, False,
                                  None, 'x'))
 
@@ -122,12 +122,12 @@ class WrangleTest(TestCase):
         fn2 = before(val(2), logging('fn2'))
         fn3 = before(val(3), logging('fn3'))
         fn4 = before(val(4), logging('fn4'))
-        self.assertEquals(3, fix(initial_in,
+        self.assertEqual(3, fix(initial_in,
                                  t1_no, fn1,
                                  t2_no, fn2,
                                  t3_yes, fn3,
                                  t4_yes, fn4))
-        self.assertEquals([('t1_no', o_in), ('t2_no', o_in), ('t3_yes', o_in), ('fn3', o_in)], log)
+        self.assertEqual([('t1_no', o_in), ('t2_no', o_in), ('t3_yes', o_in), ('fn3', o_in)], log)
 
     def testTo_fix(self):
         # Test clauses fpartial wrapping, functionality tested in testFix
@@ -160,12 +160,12 @@ class WrangleTest(TestCase):
                    t4_yes, fn4)
 
         # Twice - 1/2
-        self.assertEquals(3, f(initial_in))
-        self.assertEquals([('t1_no', o_in), ('t2_no', o_in), ('t3_yes', o_in), ('fn3', o_in)], log)
-        self.assertEquals(o_in, initial_in)
+        self.assertEqual(3, f(initial_in))
+        self.assertEqual([('t1_no', o_in), ('t2_no', o_in), ('t3_yes', o_in), ('fn3', o_in)], log)
+        self.assertEqual(o_in, initial_in)
 
         # Twice - 2/2
         del log[:]
-        self.assertEquals(3, f(initial_in))
-        self.assertEquals([('t1_no', o_in), ('t2_no', o_in), ('t3_yes', o_in), ('fn3', o_in)], log)
-        self.assertEquals(o_in, initial_in)
+        self.assertEqual(3, f(initial_in))
+        self.assertEqual([('t1_no', o_in), ('t2_no', o_in), ('t3_yes', o_in), ('fn3', o_in)], log)
+        self.assertEqual(o_in, initial_in)

@@ -28,4 +28,4 @@ export PYTHONPATH=.:"$PYTHONPATH"
 export WEIGHTLESS_COMPOSE_TEST="PYTHON"
 export TESTMODE=true
 
-python2.7 _alltests.py "$@"
+python3 _alltests.py "$@"

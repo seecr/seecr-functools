@@ -33,7 +33,7 @@ def walk(inner, outer, coll):
     if isinstance(coll, list):
         return outer([inner(e) for e in coll])
     elif isinstance(coll, Mapping):
-        return outer(dict([inner(e) for e in coll.iteritems()]))
+        return outer(dict([inner(e) for e in coll.items()]))
     elif isinstance(coll, tuple):
         return outer(tuple(inner(e) for e in coll))
     elif isinstance(coll, set):
@@ -49,7 +49,7 @@ def postwalk(fn, coll):
 
 def _():
     def prn(e):
-        print "Walked:", e
+        print("Walked:", e)
         return e
 
     def prewalk_demo(coll):

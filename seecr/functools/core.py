@@ -1,3 +1,4 @@
+from functools import reduce
 ## begin license ##
 #
 # Seecr Functools a set of various functional tools
@@ -22,7 +23,7 @@
 #
 ## end license ##
 
-from itertools import izip as _itertools_izip
+
 
 
 class reduced(object):
@@ -146,7 +147,7 @@ def map(f, *colls):
                 yield f(x)
         return _map()
     else:
-        _coll_items = _itertools_izip(*map(iter, colls))
+        _coll_items = _itertools_izip(*list(map(iter, colls)))
         del colls
         def _map():
             for _t in _coll_items:
@@ -187,7 +188,7 @@ def remove(pred):
     pred(item) returns false. pred must be free of side-effects.
     Returns a transducer when no collection is provided.
     """
-    return filter(complement(pred))
+    return list(filter(complement(pred)))
 
 def interleave(*colls):
     _zipped_items = _itertools_izip(*colls)
@@ -285,7 +286,7 @@ def get_in(o, keypath, default=None):
             v = v[key]
         except (IndexError, KeyError):
             return default
-        except TypeError, e:
+        except TypeError as e:
             raise TypeError(str(e) + ' (on accessing %s in %s)' % (repr(keypath[:i+1]), repr(o)))
     return v
 
@@ -409,7 +410,7 @@ def merge_with(f, *ds):
     """
     n = {}
     for d in ds:
-        for k, v in d.iteritems():
+        for k, v in d.items():
             if k in n:
                 n[k] = f(n[k], v)
             else:
@@ -565,7 +566,7 @@ def take(*a):
         def _take():
             if n < 1:
                 return
-            for _ in xrange(n):
+            for _ in range(n):
                 yield next(coll)
         return _take()
     else:
@@ -607,7 +608,7 @@ def drop(*a):
             if n < 1:
                 return coll
             try:
-                for _ in xrange(n):
+                for _ in range(n):
                     next(coll)
             except StopIteration:
                 pass
@@ -750,4 +751,4 @@ def sequence(*a):
         raise TypeError("sequence takes either 1 or 2 arguments ({} given)".format(len(a)))
 
 # In time expose more functions based on usage. TODO
-__all__ = ['get_in', 'update_in', 'assoc_in']
+__all__ = ['assoc', 'get_in', 'update_in', 'assoc_in']

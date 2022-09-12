@@ -31,21 +31,21 @@ from seecr.functools.string import strip, rstrip, split
 class StringTest(TestCase):
     def test_strip(self):
         # On a string
-        self.assertEquals('', strip('', None))
-        self.assertEquals('', strip(' \t\r\n \t\r\n '))
-        self.assertEquals('AA', strip(' \t\r\n AA \t\r\n '))
-        self.assertEquals('', strip(' \t\r\n \t\r\n ', None))
-        self.assertEquals('\t\r\n ', strip('\t\r\n x', 'x'))
-        self.assertEquals(' \t\r\n ', strip('x \t\r\n x', 'x'))
+        self.assertEqual('', strip('', None))
+        self.assertEqual('', strip(' \t\r\n \t\r\n '))
+        self.assertEqual('AA', strip(' \t\r\n AA \t\r\n '))
+        self.assertEqual('', strip(' \t\r\n \t\r\n ', None))
+        self.assertEqual('\t\r\n ', strip('\t\r\n x', 'x'))
+        self.assertEqual(' \t\r\n ', strip('x \t\r\n x', 'x'))
 
     def test_rstrip(self):
         # On a string
-        self.assertEquals('', rstrip('', None))
-        self.assertEquals('', rstrip(' \t\r\n \t\r\n '))
-        self.assertEquals(' \t\r\n AA', rstrip(' \t\r\n AA \t\r\n '))
-        self.assertEquals('', rstrip(' \t\r\n \t\r\n ', None))
-        self.assertEquals('\t\r\n ', rstrip('\t\r\n x', 'x'))
-        self.assertEquals('x \t\r\n ', rstrip('x \t\r\n x', 'x'))
+        self.assertEqual('', rstrip('', None))
+        self.assertEqual('', rstrip(' \t\r\n \t\r\n '))
+        self.assertEqual(' \t\r\n AA', rstrip(' \t\r\n AA \t\r\n '))
+        self.assertEqual('', rstrip(' \t\r\n \t\r\n ', None))
+        self.assertEqual('\t\r\n ', rstrip('\t\r\n x', 'x'))
+        self.assertEqual('x \t\r\n ', rstrip('x \t\r\n x', 'x'))
 
     def test_split(self):
         # Bad args
@@ -53,10 +53,10 @@ class StringTest(TestCase):
         self.assertRaises(ValueError, lambda: split('str', None))
 
         # On a string
-        self.assertEquals([''], split('', ' '))
-        self.assertEquals(['', 'x', '', ''], split(' x  ', ' '))
-        self.assertEquals(['x', 'x|x'], split('x|x|x', '|', 1))
-        self.assertEquals(['x|x', 'x'], split('x|x||x', '||', 1))
-        self.assertEquals(['x', 'x', 'x'], split('x|x|x', sep='|', maxsplit=2))
-        self.assertEquals(['x', 'x', 'x'], split('x|x|x', sep='|', maxsplit=99))
-        self.assertEquals(['x', 'x', 'x'], split('x|x|x', sep='|', maxsplit=-1))
+        self.assertEqual([''], split('', ' '))
+        self.assertEqual(['', 'x', '', ''], split(' x  ', ' '))
+        self.assertEqual(['x', 'x|x'], split('x|x|x', '|', 1))
+        self.assertEqual(['x|x', 'x'], split('x|x||x', '||', 1))
+        self.assertEqual(['x', 'x', 'x'], split('x|x|x', sep='|', maxsplit=2))
+        self.assertEqual(['x', 'x', 'x'], split('x|x|x', sep='|', maxsplit=99))
+        self.assertEqual(['x', 'x', 'x'], split('x|x|x', sep='|', maxsplit=-1))
