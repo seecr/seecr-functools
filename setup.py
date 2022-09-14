@@ -30,7 +30,7 @@ here = pathlib.Path(__file__).parent.resolve()
 
 long_description = (here/"README.md").read_text(encoding="utf-8")
 
-version = '$Version: 0.2.x$'[9:-1].strip()
+version = '$Version: 0.2.0$'[9:-1].strip()
 
 packages=find_packages(exclude=('seecr',))
 packages=find_packages() #DO_NOT_DISTRIBUTE
@@ -38,6 +38,7 @@ packages=find_packages() #DO_NOT_DISTRIBUTE
 setup(
     name='seecr-functools',
     version=version,
+    packages=packages,
     url='http://www.seecr.nl',
     author='Seecr',
     author_email='info@seecr.nl',
