@@ -3,7 +3,7 @@
 #
 # Seecr Functools a set of various functional tools
 #
-# Copyright (C) 2011-2014, 2018 Seecr (Seek You Too B.V.) https://seecr.nl
+# Copyright (C) 2011-2014, 2018, 2022 Seecr (Seek You Too B.V.) https://seecr.nl
 #
 # This file is part of "Seecr Functools"
 #
@@ -23,21 +23,30 @@
 #
 ## end license ##
 
-from distutils.core import setup
+from setuptools import setup, find_packages
+import pathlib
+
+here = pathlib.Path(__file__).parent.resolve()
+
+long_description = (here/"README.md").read_text(encoding="utf-8")
 
 version = '$Version: 1.4.x$'[9:-1].strip()
 
+packages=find_packages(exclude=('seecr',))
+packages=find_packages() #DO_NOT_DISTRIBUTE
+
 setup(
     name='seecr-functools',
-    packages=[
-        "seecr", # DO_NOT_DISTRIBUTE
-        "seecr.functools"
-    ],
     version=version,
     url='http://www.seecr.nl',
     author='Seecr',
     author_email='info@seecr.nl',
     description='Functional Tools for Seecr',
-    long_description='Functional Tools to make life easier for Seecr people.',
+    long_description=long_description,
+    long_description_content_type='text/markdown',
     platforms=['linux'],
+    classifiers=[
+        'License :: OSI Approved :: GNU General Public License v2 (GPLv2)',
+        'Programming Language :: Python :: 3',
+    ]
 )
