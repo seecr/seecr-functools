@@ -2,7 +2,7 @@
 #
 # Seecr Functools a set of various functional tools
 #
-# Copyright (C) 2017-2018 Seecr (Seek You Too B.V.) https://seecr.nl
+# Copyright (C) 2017-2018, 2022 Seecr (Seek You Too B.V.) https://seecr.nl
 #
 # This file is part of "Seecr Functools"
 #
@@ -33,7 +33,6 @@ from types import GeneratorType
 
 from seecr.functools.core import first, second, identity, some_thread, fpartial, comp, reduce, is_reduced, ensure_reduced, unreduced, reduced, completing, transduce, take, cat, map, run, filter, complement, remove, juxt, truthy, append, strng, trampoline, thrush, constantly, before, after, interpose, interleave, assoc_in, update_in, assoc, assoc_in_when, sequence, get_in, assoc_when, update_in_when, iterate, last, any_fn, drop, get, merge, merge_with
 from seecr.functools.string import strip, split
-from functools import reduce
 
 builtin_next = builtins.next
 l = list
@@ -198,13 +197,13 @@ class CoreTest(TestCase):
         try:
             get_in({'a': 'X'}, ['a', 'b'])
         except TypeError as e:
-            self.assertEqual("string indices must be integers, not str (on accessing ['a', 'b'] in {'a': 'X'})", str(e))
+            self.assertEqual("string indices must be integers (on accessing ['a', 'b'] in {'a': 'X'})", str(e))
         else: self.fail()
 
         try:
             get_in({'a': {'b': {'c': 'X'}}}, ['a', 'b', 'c', 'd'])
         except TypeError as e:
-            self.assertEqual("string indices must be integers, not str (on accessing ['a', 'b', 'c', 'd'] in {'a': {'b': {'c': 'X'}}})", str(e))
+            self.assertEqual("string indices must be integers (on accessing ['a', 'b', 'c', 'd'] in {'a': {'b': {'c': 'X'}}})", str(e))
         else: self.fail()
 
         # index in list
@@ -214,7 +213,7 @@ class CoreTest(TestCase):
         try:
             self.assertEqual('c', get_in({'a': ['b', 'c']}, ['a', 'b']))
         except TypeError as e:
-            self.assertEqual("list indices must be integers, not str (on accessing ['a', 'b'] in {'a': ['b', 'c']})", str(e))
+            self.assertEqual("list indices must be integers or slices, not str (on accessing ['a', 'b'] in {'a': ['b', 'c']})", str(e))
         else: self.fail()
 
     def testUpdate_in_oldValue(self):
@@ -862,11 +861,11 @@ class CoreTest(TestCase):
         self.assertEqual([11, 11, 12, 12, 13, 13], transduce(
             comp(
                 take(3),
-                list(map(lambda x: x + 10)),
-                list(map(lambda x: '\t\n\r{}-{}   '.format(x, x))),
-                list(map(lambda x: split(x, '-'))),
+                map(lambda x: x + 10),
+                map(lambda x: '\t\n\r{}-{}   '.format(x, x)),
+                map(lambda x: split(x, '-')),
                 cat,
-                list(map(lambda x: int(strip(x)))),
+                map(lambda x: int(strip(x))),
             ),
             completing(_a), [], [1, 2, 3, 4, 5]))
 
@@ -892,7 +891,7 @@ class CoreTest(TestCase):
         self.assertEqual([('in', 6)], called)
 
         # with transduce
-        self.assertEqual(27, transduce(list(map(lambda x: x + 10)), completing(lambda acc, e: acc + e), 0, [5, 2]))
+        self.assertEqual(27, transduce(map(lambda x: x + 10), completing(lambda acc, e: acc + e), 0, [5, 2]))
 
     def test_map_1coll(self):
         # TODO: test lazyness when implemented (using lazy_seq)!
@@ -926,8 +925,8 @@ class CoreTest(TestCase):
         self.assertEqual([12, 13, 14, 15], l(list(map(plus, [1, 2, 3, 4], [4, 3, 2, 1, 'x', object()], [7, 8, 9, 10, None, None]))))
 
     def test_filter_xf(self):
-        assert_tx_default_0_1_arities(list(filter(raiser)))
-        assert_tx_default_bad_arity(list(filter(raiser)))
+        assert_tx_default_0_1_arities(filter(raiser))
+        assert_tx_default_bad_arity(filter(raiser))
 
         # 2-arity - not-filtered
         called = []
@@ -940,7 +939,7 @@ class CoreTest(TestCase):
         self.assertEqual([], called)
 
         # with transduce
-        self.assertEqual(4, transduce(list(filter(lambda x: (x % 2) == 1)), completing(lambda acc, e: acc + e), 0, [1, 2, 3, 4]))
+        self.assertEqual(4, transduce(filter(lambda x: (x % 2) == 1), completing(lambda acc, e: acc + e), 0, [1, 2, 3, 4]))
 
     def test_remove_xf(self):
         assert_tx_default_0_1_arities(remove(raiser))

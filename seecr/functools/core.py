@@ -1,9 +1,8 @@
-from functools import reduce
 ## begin license ##
 #
 # Seecr Functools a set of various functional tools
 #
-# Copyright (C) 2017-2018 Seecr (Seek You Too B.V.) https://seecr.nl
+# Copyright (C) 2017-2018, 2022 Seecr (Seek You Too B.V.) https://seecr.nl
 #
 # This file is part of "Seecr Functools"
 #
@@ -23,7 +22,7 @@ from functools import reduce
 #
 ## end license ##
 
-
+# from functools import reduce
 
 
 class reduced(object):
@@ -147,7 +146,7 @@ def map(f, *colls):
                 yield f(x)
         return _map()
     else:
-        _coll_items = _itertools_izip(*list(map(iter, colls)))
+        _coll_items = zip(*map(iter, colls))
         del colls
         def _map():
             for _t in _coll_items:
@@ -188,10 +187,10 @@ def remove(pred):
     pred(item) returns false. pred must be free of side-effects.
     Returns a transducer when no collection is provided.
     """
-    return list(filter(complement(pred)))
+    return filter(complement(pred))
 
 def interleave(*colls):
-    _zipped_items = _itertools_izip(*colls)
+    _zipped_items = zip(*colls)
     del colls
     for _colls_item in _zipped_items:
         for i in _colls_item:
@@ -567,7 +566,10 @@ def take(*a):
             if n < 1:
                 return
             for _ in range(n):
-                yield next(coll)
+                try:
+                    yield next(coll)
+                except StopIteration:
+                    return
         return _take()
     else:
     	raise TypeError("take takes either 1 or 2 arguments ({} given)".format(len(a)))
