@@ -27,7 +27,7 @@
 from unittest import TestCase
 from seecr.test.io import stdout_replaced
 
-from collections import Mapping
+from collections.abc import Mapping
 from copy import deepcopy
 
 from seecr.functools.core import identity

@@ -197,13 +197,13 @@ class CoreTest(TestCase):
         try:
             get_in({'a': 'X'}, ['a', 'b'])
         except TypeError as e:
-            self.assertEqual("string indices must be integers (on accessing ['a', 'b'] in {'a': 'X'})", str(e))
+            self.assertEqual("string indices must be integers, not 'str' (on accessing ['a', 'b'] in {'a': 'X'})", str(e))
         else: self.fail()
 
         try:
             get_in({'a': {'b': {'c': 'X'}}}, ['a', 'b', 'c', 'd'])
         except TypeError as e:
-            self.assertEqual("string indices must be integers (on accessing ['a', 'b', 'c', 'd'] in {'a': {'b': {'c': 'X'}}})", str(e))
+            self.assertEqual("string indices must be integers, not 'str' (on accessing ['a', 'b', 'c', 'd'] in {'a': {'b': {'c': 'X'}}})", str(e))
         else: self.fail()
 
         # index in list

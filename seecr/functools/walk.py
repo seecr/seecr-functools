@@ -23,7 +23,7 @@
 ## end license ##
 
 from functools import partial
-from collections import Mapping
+from collections.abc import Mapping
 
 from seecr.functools.core import identity
 
